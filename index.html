@@ -457,6 +457,28 @@ button.thumb:hover{border-color:var(--accent)}
 </style>
 </head>
 <body>
+<script>(function(){
+/* ---------- 웹 앱 설치 (PWA) ---------- */
+let installEvt = null;
+const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const rerender = () => { try { render(); } catch (e) {} };
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; rerender(); });
+window.addEventListener("appinstalled", () => { installEvt = null; rerender(); });
+window.npdpCanInstall = () => !isStandalone() && (!!installEvt || isIOS());
+window.npdpInstall = async () => {
+  if (installEvt) { installEvt.prompt(); try { await installEvt.userChoice; } catch (e) {} installEvt = null; rerender(); return; }
+  try { drawer('<h3>휴대폰 홈 화면에 앱 추가</h3><div class="ctx">아이폰·아이패드는 Safari에서 아래 순서로 추가합니다.</div>' +
+    '<ol class="inst"><li>Safari 아래(또는 위)의 <b>공유</b> 버튼 <span class="ib">⬆︎</span> 을 누릅니다.</li><li>목록에서 <b>홈 화면에 추가</b>를 누릅니다.</li><li>오른쪽 위 <b>추가</b>를 누르면 홈 화면에 ‘NPDP 보드’ 아이콘이 생깁니다.</li></ol>' +
+    '<div class="note">카카오톡 등 다른 앱 안에서 열었다면, 먼저 오른쪽 아래 메뉴에서 <b>Safari로 열기</b>를 누른 뒤 진행해 주세요.</div>' +
+    '<div class="dactions"><div class="spacer"></div><button class="btn" data-close type="button">닫기</button></div>'); } catch (e) {}
+};
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
+})();
+</script>
 <script>window.FIREBASE_CONFIG={"apiKey": "AIzaSyDD4s6bngTgIqND3L_BiFhCXDTgKC4TzcY", "authDomain": "hemily-npdp.firebaseapp.com", "projectId": "hemily-npdp", "storageBucket": "hemily-npdp.firebasestorage.app", "messagingSenderId": "516419580461", "appId": "1:516419580461:web:49f4f54e03e54fcf71bea4"};
 window.claude={use:function(n){return (window.__fbWait||(window.__fbWait=new Promise(function(r){(function w(){window.__fbReady?window.__fbReady.then(r):setTimeout(w,20)})()}))).then(function(a){return a[n]||null})}};</script>
 <script type="module">
@@ -658,24 +680,6 @@ window.npdpImportRaw = async function(id, file, type){
   await putFile(id, file, type || file.type || "application/octet-stream", ME.email); return { id, size: file.size };
 };
 
-/* ---------- 웹 앱 설치 (PWA) ---------- */
-let installEvt = null;
-const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-const rerender = () => { try { render(); } catch (e) {} };
-window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; rerender(); });
-window.addEventListener("appinstalled", () => { installEvt = null; rerender(); });
-window.npdpCanInstall = () => !isStandalone() && (!!installEvt || isIOS());
-window.npdpInstall = async () => {
-  if (installEvt) { installEvt.prompt(); try { await installEvt.userChoice; } catch (e) {} installEvt = null; rerender(); return; }
-  try { drawer('<h3>휴대폰 홈 화면에 앱 추가</h3><div class="ctx">아이폰·아이패드는 Safari에서 아래 순서로 추가합니다.</div>' +
-    '<ol class="inst"><li>Safari 아래(또는 위)의 <b>공유</b> 버튼 <span class="ib">⬆︎</span> 을 누릅니다.</li><li>목록에서 <b>홈 화면에 추가</b>를 누릅니다.</li><li>오른쪽 위 <b>추가</b>를 누르면 홈 화면에 ‘NPDP 보드’ 아이콘이 생깁니다.</li></ol>' +
-    '<div class="note">카카오톡 등 다른 앱 안에서 열었다면, 먼저 오른쪽 아래 메뉴에서 <b>Safari로 열기</b>를 누른 뒤 진행해 주세요.</div>' +
-    '<div class="dactions"><div class="spacer"></div><button class="btn" data-close type="button">닫기</button></div>'); } catch (e) {}
-};
-if ("serviceWorker" in navigator && location.protocol === "https:") {
-  window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
-}
 
 </script>
 <header class="top" id="top"></header>
