@@ -2,7 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
 <meta name="description" content="신제품 개발 일정 보드">
 <meta property="og:type" content="website">
 <meta property="og:title" content="해밀리 상품화본부 NPDP">
@@ -14,8 +15,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="robots" content="noindex,nofollow">
 <title>해밀리 NPDP 일정 보드</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 /* Layout: 제품 포트폴리오 타임라인(홈) → 제품별 간트(좌측 고정 공정열 + 우측 드래그 타임라인) */
 :root{
@@ -27,8 +28,8 @@
   --pc0:#0f5a45; --pc1:#c4661c; --pc2:#2b7a55; --pc3:#7d5f33; --pc4:#a3365a;
   --c0:#3d7a5c; --c1:#3a68b0; --c2:#b0507f; --c3:#b37718; --c4:#7454b8; --c5:#23888c; --c6:#857563;
   --shadow:0 1px 2px rgba(20,30,25,.06),0 6px 24px rgba(20,30,25,.08);
-  --f-ui:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
-  --f-num:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --f-ui:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,system-ui,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-num:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --pc0:#6cc39d; --pc1:#f0a058; --pc2:#7fcf9f; --pc3:#d1b07a; --pc4:#ec8fae;
@@ -399,7 +400,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const $main = () => document.getElementById("main"), $top = () => document.getElementById("top");
 
 /* ---------- claude-db-compatible wrapper over Firestore ---------- */
-const wrapDoc = s => ({ id: s.id, exists: s.exists(), data: () => s.data() });
+const wrapDoc = s => ({ id: s.id, exists: s.exists(), data: () => s.data(), ref: s.ref && s.ref.path ? docRef(s.ref.path) : undefined });
 const wrapQS = qs => ({ docs: qs.docs.map(wrapDoc), size: qs.size, empty: qs.empty });
 function docRef(path){ const r = doc(fdb, path);
   return { id: r.id,
@@ -509,7 +510,7 @@ onAuthStateChanged(auth, async u => {
   if (!mv.name && u.displayName || !mv.lastLogin || Date.now() - Date.parse(mv.lastLogin) > 6 * 3600e3)
     updateDoc(doc(fdb, "members/" + email), { ...(mv.name ? {} : { name: u.displayName || email.split("@")[0] }), lastLogin: new Date().toISOString() }).catch(() => {});
   onSnapshot(collection(fdb, "members"), qs => { const o = {}; qs.docs.forEach(d => o[d.id] = d.data()); MEMBERS = o; }, () => {});
-  getDoc(doc(fdb, "meta/legacyNames")).then(s => { if (s.exists()) LEGACY = s.data().names || {}; }).catch(() => {});
+  getDoc(doc(fdb, "meta/legacyNames")).then(s => { if (s.exists()) { const d = s.data() || {}; LEGACY = d.names || d; } }).catch(() => {});
   started = true;
   $main().innerHTML = '<div class="loading" id="loading">일정 데이터를 불러오는 중…</div>';
   resolveReady({ db: dbApi, user: userApi(), assets: ME.role === "viewer" ? null : assetsApi, downloads: downloadsApi });
