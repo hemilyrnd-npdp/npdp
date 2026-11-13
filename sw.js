@@ -1,5 +1,5 @@
 /* NPDP 일정 보드 — 앱 껍데기만 저장합니다. 일정 데이터(Firestore)와 로그인은 항상 서버에서 직접 받습니다. */
-const C = "npdp-shell-v3";
+const C = "npdp-shell-v4";
 self.addEventListener("install", e => { self.skipWaiting();
   e.waitUntil(caches.open(C).then(c => c.addAll(["./", "./manifest.webmanifest", "./app-icon-192.png"])).catch(() => {})); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== C).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
