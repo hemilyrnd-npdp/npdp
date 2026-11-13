@@ -180,8 +180,12 @@ main{flex:1;min-height:0;display:flex;flex-direction:column}
 button.thumb{cursor:pointer}
 button.thumb:hover{border-color:var(--accent)}
 .pcat{font-weight:700;color:var(--pc)}
-.hid-tag{display:inline-block;margin-left:8px;padding:0 7px;border-radius:999px;background:var(--warn-soft);color:var(--warn);font-size:10.5px;font-weight:600;line-height:17px;vertical-align:1px}
-.vis-btn[aria-pressed="true"]{background:var(--warn-soft);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,var(--warn-soft))}
+.hid-tag{display:inline-block;margin-left:8px;padding:0 8px;border-radius:999px;background:#ffe45c;color:#b3261e;border:1.5px solid #d93025;font-size:11px;font-weight:700;line-height:17px;vertical-align:1px;white-space:nowrap}
+.hid-tag.big{margin-left:0;font-size:12px;line-height:22px;padding:0 10px;flex:none}
+.vis-btn{border:1.5px solid #d93025;color:#b3261e;font-weight:600}
+.vis-btn:hover{border-color:#b3261e;background:#fff8d6}
+.vis-btn[aria-pressed="true"]{background:#ffe45c;color:#b3261e;border-color:#d93025;font-weight:700}
+.vis-btn[aria-pressed="true"]:hover{background:#ffd93d;border-color:#b3261e}
 .pinfo-btn{font-size:12.5px}
 .plink .no{display:inline-block;min-width:22px;margin-right:6px;font-size:11.5px;font-weight:500;color:var(--faint)}
 .empty{padding:40px 20px;text-align:center;color:var(--muted)}
@@ -404,9 +408,10 @@ const $main = () => document.getElementById("main"), $top = () => document.getEl
 /* ---------- claude-db-compatible wrapper over Firestore ---------- */
 const wrapDoc = s => ({ id: s.id, exists: s.exists(), data: () => s.data(), ref: s.ref && s.ref.path ? docRef(s.ref.path) : undefined });
 const wrapQS = qs => ({ docs: qs.docs.map(wrapDoc), size: qs.size, empty: qs.empty });
-/* "보기 숨김": products/images/deleted carry hidden:true|false. Viewers only ever query hidden==false (the rules refuse anything else). */
+/* "일정 숨김": products/images/deleted carry hidden:true|false. Only admins see hidden ones;
+   everyone else (editor, viewer) only ever queries hidden==false (the rules refuse anything else). */
 const VFILT = new Set(["products", "images", "deleted"]);
-const isViewer = () => !ME || ME.role === "viewer";
+const isViewer = () => !ME || ME.role !== "admin";
 function withHidden(path, d){
   const m = /^(products|images|deleted)\/([^/]+)$/.exec(path); if (!m || !d) return d;
   let h = false;
@@ -671,7 +676,7 @@ function diffLines(a, b){
   { const ia=a.info||{}, ib=b.info||{}; [["cat","카테고리"],["channel","채널"],["moq","MOQ"],["sales","매출액"]].forEach(([k,n])=>{ if((ia[k]||"")!==(ib[k]||"")) out.push(n+": "+(ia[k]||"없음")+" → "+(ib[k]||"없음")); }); }
   if ((a.expect||"")!==(b.expect||"")) out.push("예상 런칭 시기: "+(a.expect||"없음")+" → "+(b.expect||"없음"));
   if ((a.owner||"")!==(b.owner||"")) out.push("담당: "+(a.owner||"없음")+" → "+(b.owner||"없음"));
-  if (!!a.hidden!==!!b.hidden) out.push(b.hidden?"보기 권한 숨김 켜짐":"보기 권한 숨김 꺼짐");
+  if (!!a.hidden!==!!b.hidden) out.push(b.hidden?"일정 숨김 켜짐 (관리자만 보임)":"일정 숨김 꺼짐 (모두에게 보임)");
   const ta=new Map((a.tasks||[]).map(t=>[t.id,t])), tb=new Map((b.tasks||[]).map(t=>[t.id,t]));
   for (const [id,t] of ta) if (!tb.has(id)) out.push("공정 삭제: "+t.proc+((t.bars||[]).length?" (일정 "+t.bars.length+"건 포함)":""));
   for (const [id,t] of tb) if (!ta.has(id)) out.push("공정 추가: "+t.proc+" ("+t.main+")");
@@ -875,7 +880,7 @@ function renderTop(r){
     const p = S.products[r.pid];
     top.innerHTML = '<nav class="crumb"><a href="'+(isArchived(p)?"#archive":"#home")+'" class="btn ghost" id="back">'+(isArchived(p)?"← 런칭 완료 목록":"← 전체 제품")+'</a><span class="sep">/</span>'+
       (S.canWrite?'<button type="button" class="thumb sm" id="pimg" title="제품 이미지 바꾸기" aria-label="제품 이미지 바꾸기">'+thumbInner(p)+'</button>':'<span class="thumb sm">'+thumbInner(p)+'</span>')+
-      '<input class="pname" id="pname" aria-label="제품명" value="'+esc(p.name)+'" '+(S.canWrite?"":"readonly")+' size="'+Math.max(4,Math.min(30,[...p.name].length+2))+'"></nav>'+ro+'<div class="ptools" id="tools"></div>';
+      '<input class="pname" id="pname" aria-label="제품명" value="'+esc(p.name)+'" '+(S.canWrite?"":"readonly")+' size="'+Math.max(4,Math.min(30,[...p.name].length+2))+'"></nav>'+(p.hidden&&S.isAdmin?'<span class="hid-tag big" title="관리자만 볼 수 있습니다">🔒 일정 숨김</span>':'')+ro+'<div class="ptools" id="tools"></div>';
     top.querySelector("#pimg")?.addEventListener("click", ()=>openInfo(p));
     const inp = top.querySelector("#pname");
     inp.addEventListener("change", ()=>{ const v=inp.value.trim(); if(!v||v===p.name) return; commit(p.id, ()=>{ p.name=v; }, "제품명을 바꿨습니다."); });
@@ -919,7 +924,7 @@ function renderHome(){
     if (L!==null && L>=lo && L<=hi) segs+='<div class="launch" style="left:'+pct(L)+'%" title="런칭 '+md(L)+'"></div>';
     const nTasks=(p.tasks||[]).length, nWith=(p.tasks||[]).filter(t=>(t.bars||[]).length).length;
     const st = rangeOf(p); const started = !!st && st[0] <= TODAY;
-    rows += '<div class="prow'+(started?' started':'')+'"><div class="pcell"><span class="no num">'+String(rank[p.id]).padStart(2,"0")+'</span><a class="tlink" href="#p-'+p.id+'" tabindex="-1" aria-hidden="true">'+thumb(p)+'</a><div class="pbody"><a class="plink" href="#p-'+p.id+'">'+esc(p.name)+(p.hidden&&S.canWrite?'<span class="hid-tag" title="보기 권한 사용자에게는 보이지 않습니다">🔒 보기 숨김</span>':'')+'</a>'+infoHtml(p)+planTag(p)+'</div></div>'+
+    rows += '<div class="prow'+(started?' started':'')+'"><div class="pcell"><span class="no num">'+String(rank[p.id]).padStart(2,"0")+'</span><a class="tlink" href="#p-'+p.id+'" tabindex="-1" aria-hidden="true">'+thumb(p)+'</a><div class="pbody"><a class="plink" href="#p-'+p.id+'">'+esc(p.name)+(p.hidden&&S.isAdmin?'<span class="hid-tag" title="관리자만 볼 수 있습니다 (편집자·보기 권한에게는 숨김)">🔒 일정 숨김</span>':'')+'</a>'+infoHtml(p)+planTag(p)+'</div></div>'+
       '<div>'+dday+'</div><div class="owner">'+esc(p.owner||"—")+'</div><div class="next">'+next+'</div>'+
       '<div><a href="#p-'+p.id+'" class="strip" style="display:block" aria-label="'+esc(p.name)+' 일정 열기">'+mdivs+'<div class="lane"></div>'+segs+
       (TODAY>=lo&&TODAY<=hi?'<div class="tl" style="left:'+pct(TODAY)+'%"></div>':'')+'</a></div></div>';
@@ -1054,7 +1059,7 @@ function renderProduct(pid){
       '<button class="btn" type="button" id="fold-all">'+(gs.every((g,gi)=>S.closed[pid+"|"+gi+"|"+g.main])?"모두 펼치기":"모두 접기")+'</button>'+
       (S.canWrite?'<button class="btn" type="button" id="add-task">＋ 공정</button><button class="btn" type="button" id="bulk">일괄 이동</button>':'')+
       '<button class="btn" type="button" id="csv">CSV</button>'+
-      (S.canWrite?'<button class="btn vis-btn" type="button" id="vis" aria-pressed="'+!!p.hidden+'" title="켜면 보기 권한 사용자에게 이 제품 일정표가 보이지 않습니다">'+(p.hidden?'🔒 보기 숨김 켜짐':'보기 숨김 꺼짐')+'</button>':'')+
+      (S.isAdmin?'<button class="btn vis-btn" type="button" id="vis" aria-pressed="'+!!p.hidden+'" title="켜면 관리자를 뺀 모든 사람(편집자·보기)에게 이 제품 일정표가 보이지 않습니다">'+(p.hidden?'🔒 일정 숨김 켜짐':'🔓 일정 숨김 꺼짐')+'</button>':'')+
       (S.canWrite?'<button class="btn ghost" type="button" id="undo" title="Ctrl+Z">되돌리기</button>':'')+
       '<button class="btn ghost" type="button" id="hist">변경 기록</button>'+
       '<button class="btn ghost" type="button" id="help">사용법</button>'+
@@ -1084,7 +1089,7 @@ function bindProduct(p, gantt){
   main.querySelector("#undo")?.addEventListener("click",undo);
   main.querySelector("#del-prod")?.addEventListener("click",()=>openDeleteProduct(p));
   main.querySelector("#vis")?.addEventListener("click",()=>{ const on=!p.hidden;
-    commit(p.id,()=>{ if(on) S.products[p.id].hidden=true; else delete S.products[p.id].hidden; }, on?"보기 권한 사용자에게 이 일정표를 숨겼습니다.":"보기 권한 사용자에게 다시 보이게 했습니다."); });
+    commit(p.id,()=>{ if(on) S.products[p.id].hidden=true; else delete S.products[p.id].hidden; }, on?"일정을 숨겼습니다. 이제 관리자만 볼 수 있습니다.":"일정 숨김을 껐습니다. 모두에게 다시 보입니다."); });
   const ow = main.querySelector("#owner");
   ow.addEventListener("change",()=>{ const v=ow.value.trim(); if(v===p.owner) return; commit(p.id,()=>{p.owner=v;},"담당자를 바꿨습니다."); });
   main.querySelector("#add-task")?.addEventListener("click",()=>openTask(p,null));
