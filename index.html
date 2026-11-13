@@ -180,6 +180,8 @@ main{flex:1;min-height:0;display:flex;flex-direction:column}
 button.thumb{cursor:pointer}
 button.thumb:hover{border-color:var(--accent)}
 .pcat{font-weight:700;color:var(--pc)}
+.hid-tag{display:inline-block;margin-left:8px;padding:0 7px;border-radius:999px;background:var(--warn-soft);color:var(--warn);font-size:10.5px;font-weight:600;line-height:17px;vertical-align:1px}
+.vis-btn[aria-pressed="true"]{background:var(--warn-soft);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,var(--warn-soft))}
 .pinfo-btn{font-size:12.5px}
 .plink .no{display:inline-block;min-width:22px;margin-right:6px;font-size:11.5px;font-weight:500;color:var(--faint)}
 .empty{padding:40px 20px;text-align:center;color:var(--muted)}
@@ -402,21 +404,40 @@ const $main = () => document.getElementById("main"), $top = () => document.getEl
 /* ---------- claude-db-compatible wrapper over Firestore ---------- */
 const wrapDoc = s => ({ id: s.id, exists: s.exists(), data: () => s.data(), ref: s.ref && s.ref.path ? docRef(s.ref.path) : undefined });
 const wrapQS = qs => ({ docs: qs.docs.map(wrapDoc), size: qs.size, empty: qs.empty });
+/* "보기 숨김": products/images/deleted carry hidden:true|false. Viewers only ever query hidden==false (the rules refuse anything else). */
+const VFILT = new Set(["products", "images", "deleted"]);
+const isViewer = () => !ME || ME.role === "viewer";
+function withHidden(path, d){
+  const m = /^(products|images|deleted)\/([^/]+)$/.exec(path); if (!m || !d) return d;
+  let h = false;
+  if (m[1] === "products") h = d.hidden === true;
+  else if (m[1] === "images") { try { h = !!(S.products[m[2]] && S.products[m[2]].hidden); } catch (e) {} }
+  else { try { h = JSON.parse(d.data || "{}").hidden === true; } catch (e) {} }
+  return { ...d, hidden: h };
+}
 function docRef(path){ const r = doc(fdb, path);
   return { id: r.id,
     get: async () => wrapDoc(await getDoc(r)),
-    set: d => setDoc(r, d), update: d => updateDoc(r, d), delete: () => deleteDoc(r),
+    set: async d => { const v = withHidden(path, d); await setDoc(r, v);
+      const m = /^products\/([^/]+)$/.exec(path);
+      if (m) updateDoc(doc(fdb, "images/" + m[1]), { hidden: v.hidden }).catch(() => {}); },
+    update: d => updateDoc(r, d), delete: () => deleteDoc(r),
     onSnapshot: (cb, err) => onSnapshot(r, s => cb(wrapDoc(s)), err) }; }
-function colRef(path, cons = []){
-  const base = collection(fdb, path), q = () => cons.length ? query(base, ...cons) : base;
+function colRef(path, cons = [], post = {}){
+  const base = collection(fdb, path), filt = () => VFILT.has(path) && isViewer();
+  const q = () => { if (!filt()) return cons.length ? query(base, ...cons) : base;
+    return query(base, where("hidden", "==", false), ...(post.ord ? [] : cons)); };
+  const fin = qs => { const w = wrapQS(qs); if (filt() && post.ord) {
+      const [f, dir] = post.ord; w.docs.sort((a, b) => { const x = a.data()[f], y = b.data()[f]; return (x < y ? -1 : x > y ? 1 : 0) * (dir === "desc" ? -1 : 1); });
+      if (post.lim) w.docs = w.docs.slice(0, post.lim); } return w; };
   return { id: base.id,
     doc: id => docRef(path + "/" + id),
     add: async d => { const r = await addDoc(base, d); return { id: r.id }; },
-    orderBy: (f, dir) => colRef(path, [...cons, orderBy(f, dir || "asc")]),
-    limit: n => colRef(path, [...cons, limit(n)]),
-    where: (f, op, v) => colRef(path, [...cons, where(f, op === "eq" ? "==" : op, v)]),
-    get: async () => wrapQS(await getDocs(q())),
-    onSnapshot: (cb, err) => onSnapshot(q(), qs => cb(wrapQS(qs)), err) }; }
+    orderBy: (f, dir) => colRef(path, [...cons, orderBy(f, dir || "asc")], { ...post, ord: [f, dir || "asc"] }),
+    limit: n => colRef(path, [...cons, limit(n)], { ...post, lim: n }),
+    where: (f, op, v) => colRef(path, [...cons, where(f, op === "eq" ? "==" : op, v)], post),
+    get: async () => fin(await getDocs(q())),
+    onSnapshot: (cb, err) => onSnapshot(q(), qs => cb(fin(qs)), err) }; }
 const dbApi = { doc: docRef, collection: p => colRef(p) };
 
 /* ---------- files: stored inside Firestore (Spark plan), split into ~900KB chunks.
@@ -650,6 +671,7 @@ function diffLines(a, b){
   { const ia=a.info||{}, ib=b.info||{}; [["cat","카테고리"],["channel","채널"],["moq","MOQ"],["sales","매출액"]].forEach(([k,n])=>{ if((ia[k]||"")!==(ib[k]||"")) out.push(n+": "+(ia[k]||"없음")+" → "+(ib[k]||"없음")); }); }
   if ((a.expect||"")!==(b.expect||"")) out.push("예상 런칭 시기: "+(a.expect||"없음")+" → "+(b.expect||"없음"));
   if ((a.owner||"")!==(b.owner||"")) out.push("담당: "+(a.owner||"없음")+" → "+(b.owner||"없음"));
+  if (!!a.hidden!==!!b.hidden) out.push(b.hidden?"보기 권한 숨김 켜짐":"보기 권한 숨김 꺼짐");
   const ta=new Map((a.tasks||[]).map(t=>[t.id,t])), tb=new Map((b.tasks||[]).map(t=>[t.id,t]));
   for (const [id,t] of ta) if (!tb.has(id)) out.push("공정 삭제: "+t.proc+((t.bars||[]).length?" (일정 "+t.bars.length+"건 포함)":""));
   for (const [id,t] of tb) if (!ta.has(id)) out.push("공정 추가: "+t.proc+" ("+t.main+")");
@@ -897,7 +919,7 @@ function renderHome(){
     if (L!==null && L>=lo && L<=hi) segs+='<div class="launch" style="left:'+pct(L)+'%" title="런칭 '+md(L)+'"></div>';
     const nTasks=(p.tasks||[]).length, nWith=(p.tasks||[]).filter(t=>(t.bars||[]).length).length;
     const st = rangeOf(p); const started = !!st && st[0] <= TODAY;
-    rows += '<div class="prow'+(started?' started':'')+'"><div class="pcell"><span class="no num">'+String(rank[p.id]).padStart(2,"0")+'</span><a class="tlink" href="#p-'+p.id+'" tabindex="-1" aria-hidden="true">'+thumb(p)+'</a><div class="pbody"><a class="plink" href="#p-'+p.id+'">'+esc(p.name)+'</a>'+infoHtml(p)+planTag(p)+'</div></div>'+
+    rows += '<div class="prow'+(started?' started':'')+'"><div class="pcell"><span class="no num">'+String(rank[p.id]).padStart(2,"0")+'</span><a class="tlink" href="#p-'+p.id+'" tabindex="-1" aria-hidden="true">'+thumb(p)+'</a><div class="pbody"><a class="plink" href="#p-'+p.id+'">'+esc(p.name)+(p.hidden&&S.canWrite?'<span class="hid-tag" title="보기 권한 사용자에게는 보이지 않습니다">🔒 보기 숨김</span>':'')+'</a>'+infoHtml(p)+planTag(p)+'</div></div>'+
       '<div>'+dday+'</div><div class="owner">'+esc(p.owner||"—")+'</div><div class="next">'+next+'</div>'+
       '<div><a href="#p-'+p.id+'" class="strip" style="display:block" aria-label="'+esc(p.name)+' 일정 열기">'+mdivs+'<div class="lane"></div>'+segs+
       (TODAY>=lo&&TODAY<=hi?'<div class="tl" style="left:'+pct(TODAY)+'%"></div>':'')+'</a></div></div>';
@@ -1032,6 +1054,7 @@ function renderProduct(pid){
       '<button class="btn" type="button" id="fold-all">'+(gs.every((g,gi)=>S.closed[pid+"|"+gi+"|"+g.main])?"모두 펼치기":"모두 접기")+'</button>'+
       (S.canWrite?'<button class="btn" type="button" id="add-task">＋ 공정</button><button class="btn" type="button" id="bulk">일괄 이동</button>':'')+
       '<button class="btn" type="button" id="csv">CSV</button>'+
+      (S.canWrite?'<button class="btn vis-btn" type="button" id="vis" aria-pressed="'+!!p.hidden+'" title="켜면 보기 권한 사용자에게 이 제품 일정표가 보이지 않습니다">'+(p.hidden?'🔒 보기 숨김 켜짐':'보기 숨김 꺼짐')+'</button>':'')+
       (S.canWrite?'<button class="btn ghost" type="button" id="undo" title="Ctrl+Z">되돌리기</button>':'')+
       '<button class="btn ghost" type="button" id="hist">변경 기록</button>'+
       '<button class="btn ghost" type="button" id="help">사용법</button>'+
@@ -1060,6 +1083,8 @@ function bindProduct(p, gantt){
   main.querySelector("#bulk")?.addEventListener("click",()=>openBulk(p));
   main.querySelector("#undo")?.addEventListener("click",undo);
   main.querySelector("#del-prod")?.addEventListener("click",()=>openDeleteProduct(p));
+  main.querySelector("#vis")?.addEventListener("click",()=>{ const on=!p.hidden;
+    commit(p.id,()=>{ if(on) S.products[p.id].hidden=true; else delete S.products[p.id].hidden; }, on?"보기 권한 사용자에게 이 일정표를 숨겼습니다.":"보기 권한 사용자에게 다시 보이게 했습니다."); });
   const ow = main.querySelector("#owner");
   ow.addEventListener("change",()=>{ const v=ow.value.trim(); if(v===p.owner) return; commit(p.id,()=>{p.owner=v;},"담당자를 바꿨습니다."); });
   main.querySelector("#add-task")?.addEventListener("click",()=>openTask(p,null));
