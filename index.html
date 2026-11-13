@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1f6b52">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="NPDP 보드">
+<link rel="apple-touch-icon" href="app-apple-touch-icon.png">
+<link rel="icon" type="image/png" href="app-favicon-64.png">
 <meta name="description" content="신제품 개발 일정 보드">
 <meta property="og:type" content="website">
 <meta property="og:title" content="해밀리 상품화본부 NPDP">
@@ -60,6 +68,9 @@ a{color:inherit}
 
 /* top bar */
 .top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-block:8px;border-bottom:1px solid var(--line);flex:none}
+.inst-btn{border-color:var(--accent);color:var(--accent);font-weight:600}
+.inst{margin:0;padding-left:20px;display:grid;gap:8px;font-size:13.5px;line-height:1.5}
+.inst .ib{display:inline-block;padding:0 5px;border:1px solid var(--line-strong);border-radius:4px;font-size:12px}
 .acct{display:inline-flex;align-items:center;gap:6px;padding-left:10px;margin-left:2px;border-left:1px solid var(--line);font-size:12px;color:var(--muted)}
 .acct-name{color:var(--fg);font-weight:600;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .acct-role{font-size:11px;padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:600}
@@ -383,6 +394,66 @@ button.thumb:hover{border-color:var(--accent)}
   .glabel .sub{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.hide-touch{}
+.pbtns{display:contents}
+@media (pointer:coarse){
+  .hide-touch{display:none}
+  .bar{touch-action:pan-x pan-y}
+  .bar .h{display:none}
+  .bar.dragging{touch-action:none}
+}
+/* ---------- mobile (phones) ---------- */
+@media (max-width:760px){
+  body{padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}
+  .top{gap:6px 8px;padding-block:6px}
+  .brand h1,.crumb .pname{font-size:16px}
+  .today-chip{display:none}
+  .top .btn{height:30px;padding:0 9px;font-size:12.5px}
+  .home{padding-block:10px 24px}
+  .home-head{gap:10px;margin-bottom:10px}
+  .home-head h2{font-size:19px}
+  .filters{gap:10px;justify-content:flex-start;width:100%}
+  .dd-btn{min-width:96px}
+  .tabs{flex-wrap:wrap}
+  .urg-legend{position:static;flex:0 0 100%;order:5;padding:4px 2px 6px;left:auto!important}
+  .board-scroll{overflow:visible}
+  .ptable{min-width:0}
+  .prow.head{display:none}
+  .prow{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"p d" "n o" "s s";min-height:0;padding:6px 0 8px}
+  .prow > div{padding:4px 10px}
+  .prow > div:nth-child(1){grid-area:p}
+  .prow > div:nth-child(2){grid-area:d;text-align:right;align-self:start;padding-top:6px}
+  .prow > div:nth-child(3){grid-area:o;text-align:right;align-self:center;font-size:12px;color:var(--muted)}
+  .prow > div:nth-child(4){grid-area:n;padding-left:40px}
+  .prow > div:nth-child(5){grid-area:s;padding-top:0;padding-bottom:0}
+  .pcell{grid-template-columns:20px 36px minmax(0,1fr);column-gap:8px}
+  .pcell .plink{white-space:normal;line-height:18px}
+  .info{display:flex;flex-wrap:wrap;gap:0 6px;font-size:11.5px}
+  .info > span{overflow:visible}
+  .pinfo-btn .info{display:inline-flex}
+  .next{font-size:11.5px}
+  .strip{height:18px}
+  .strip .lane{inset:6px 0}.strip .seg2{top:4px;height:10px}.strip .launch{top:1px;width:8px;height:8px}
+  /* product view */
+  .crumb{flex:1 1 100%}
+  .pmeta{gap:8px}
+  .ptools{gap:5px}
+  .tipnote{margin:0;font-size:10.5px;flex:1 1 100%;min-width:0;max-width:100%;white-space:normal}
+  .gantt{margin-top:6px;border-radius:6px}
+  .ptools{flex-wrap:wrap;overflow:visible;padding-bottom:0}
+  .ptools > .spacer{display:none}
+  .pmeta{flex:1 1 100%;flex-wrap:wrap;gap:6px 10px}
+  .pinfo-btn{height:auto;min-height:28px;padding:3px 9px;white-space:normal;text-align:left}
+  .pbtns{display:flex;flex:1 1 100%;min-width:0;max-width:100%;gap:5px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:3px;scrollbar-width:thin}
+  .pbtns > *{flex:none}
+  .drawer{box-sizing:border-box;width:100vw;max-width:100vw;border-left:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .drawer.wide{width:100vw}
+  .drawer > *{flex-shrink:0}
+  .drawer .dx{min-height:auto}
+  .toast{max-width:calc(100vw - 24px)}
+}
+.drawer{overflow-x:hidden}
+.drawer > *{max-width:100%}
 </style>
 </head>
 <body>
@@ -586,6 +657,25 @@ window.npdpImportRaw = async function(id, file, type){
   if (!/^[0-9a-f]{32}$/.test(id)) throw new Error("bad id");
   await putFile(id, file, type || file.type || "application/octet-stream", ME.email); return { id, size: file.size };
 };
+
+/* ---------- 웹 앱 설치 (PWA) ---------- */
+let installEvt = null;
+const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const rerender = () => { try { render(); } catch (e) {} };
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; rerender(); });
+window.addEventListener("appinstalled", () => { installEvt = null; rerender(); });
+window.npdpCanInstall = () => !isStandalone() && (!!installEvt || isIOS());
+window.npdpInstall = async () => {
+  if (installEvt) { installEvt.prompt(); try { await installEvt.userChoice; } catch (e) {} installEvt = null; rerender(); return; }
+  try { drawer('<h3>휴대폰 홈 화면에 앱 추가</h3><div class="ctx">아이폰·아이패드는 Safari에서 아래 순서로 추가합니다.</div>' +
+    '<ol class="inst"><li>Safari 아래(또는 위)의 <b>공유</b> 버튼 <span class="ib">⬆︎</span> 을 누릅니다.</li><li>목록에서 <b>홈 화면에 추가</b>를 누릅니다.</li><li>오른쪽 위 <b>추가</b>를 누르면 홈 화면에 ‘NPDP 보드’ 아이콘이 생깁니다.</li></ol>' +
+    '<div class="note">카카오톡 등 다른 앱 안에서 열었다면, 먼저 오른쪽 아래 메뉴에서 <b>Safari로 열기</b>를 누른 뒤 진행해 주세요.</div>' +
+    '<div class="dactions"><div class="spacer"></div><button class="btn" data-close type="button">닫기</button></div>'); } catch (e) {}
+};
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+}
 
 </script>
 <header class="top" id="top"></header>
@@ -835,8 +925,9 @@ function ddHtml(kind, label, aria, items, cur){
     '<div class="dd-menu"><div class="dd-list" role="group" aria-label="'+esc(aria)+'">'+items.map(i=>'<button type="button" aria-pressed="'+(i.v===cur)+'" data-'+kind+'="'+esc(i.v)+'"><span>'+esc(i.v)+'</span>'+(i.n!=null?'<span class="num">'+i.n+'</span>':'')+'</button>').join("")+'</div></div></div>';
 }
 function acctHtml(){ const a = window.npdpAccount && window.npdpAccount(); if (!a) return "";
-  return '<span class="acct" title="'+esc(a.email)+'"><span class="acct-name">'+esc(a.name)+'</span><span class="acct-role">'+esc(a.roleName)+'</span><button class="btn ghost" id="btn-out" type="button">로그아웃</button></span>'; }
-function wireAcct(root){ root.querySelector("#btn-out")?.addEventListener("click", ()=>window.npdpSignOut&&window.npdpSignOut()); }
+  return (window.npdpCanInstall && window.npdpCanInstall() ? '<button class="btn inst-btn" id="btn-install" type="button">📲 앱 설치</button>' : '')+'<span class="acct" title="'+esc(a.email)+'"><span class="acct-name">'+esc(a.name)+'</span><span class="acct-role">'+esc(a.roleName)+'</span><button class="btn ghost" id="btn-out" type="button">로그아웃</button></span>'; }
+function wireAcct(root){ root.querySelector("#btn-out")?.addEventListener("click", ()=>window.npdpSignOut&&window.npdpSignOut());
+  root.querySelector("#btn-install")?.addEventListener("click", ()=>window.npdpInstall&&window.npdpInstall()); }
 const SHARE_URL = "https://hemilyrnd-npdp.github.io/npdp/?v=2";
 async function copyShareLink(){
   let ok=false;
@@ -1053,7 +1144,7 @@ function renderProduct(pid){
       (p.plan?'<span class="ptag inline">'+esc([p.plan.year+" "+p.plan.quarter+" 출시 계획", p.plan.line, p.plan.channel, p.plan.target].join(" · "))+'</span>':'')+
       (S.canWrite && !allBars(p).length ? '<span class="hint" style="color:var(--accent)">공정 줄의 빈 칸을 끌거나 더블클릭해 첫 일정을 만드세요</span>' : '')+
       '</div><div class="spacer"></div>'+
-      '<div class="seg" role="group" aria-label="보기 단위">'+zoomBtns+'</div>'+
+      '<div class="pbtns"><div class="seg" role="group" aria-label="보기 단위">'+zoomBtns+'</div>'+
       '<button class="btn" type="button" id="go-today">오늘</button>'+
       '<button class="btn" type="button" id="hide-empty" aria-pressed="'+!!S.hideEmpty+'">빈 공정 숨기기</button>'+
       '<button class="btn" type="button" id="fold-all">'+(gs.every((g,gi)=>S.closed[pid+"|"+gi+"|"+g.main])?"모두 펼치기":"모두 접기")+'</button>'+
@@ -1063,8 +1154,9 @@ function renderProduct(pid){
       (S.canWrite?'<button class="btn ghost" type="button" id="undo" title="Ctrl+Z">되돌리기</button>':'')+
       '<button class="btn ghost" type="button" id="hist">변경 기록</button>'+
       '<button class="btn ghost" type="button" id="help">사용법</button>'+
-      (S.canWrite?'<button class="btn ghost danger" type="button" id="del-prod">제품 삭제</button>':'')+
-      '<div class="tipnote">※ 막대를 끌어 날짜를 옮기고, 양 끝을 끌어 기간을 조절하세요. 막대를 누르면 상세 내용·첨부를 넣을 수 있습니다(노란 점 = 상세 있음).</div>';
+      (S.canWrite?'<button class="btn ghost danger" type="button" id="del-prod">제품 삭제</button>':'')+'</div>'+
+      (COARSE?'<div class="tipnote">※ 막대를 짧게 누르면 날짜·상세 내용을 고칠 수 있고, 길게 누른 채 좌우로 끌면 날짜를 옮깁니다(노란 점 = 상세 있음).</div>':'')+
+      '<div class="tipnote'+(COARSE?' hide-touch':'')+'">※ 막대를 끌어 날짜를 옮기고, 양 끝을 끌어 기간을 조절하세요. 막대를 누르면 상세 내용·첨부를 넣을 수 있습니다(노란 점 = 상세 있음).</div>';
   main.innerHTML =
     '<div class="gantt'+(S.canWrite?"":" ro")+'" data-pid="'+pid+'" style="--rowh:'+rowH+'px"><div class="ginner" style="width:'+(LW+TW)+'px">'+
       '<div class="ghead"><div class="gcorner" style="width:'+LW+'px"><span>대분류 › 중분류 · 공정</span></div><div class="gscale" style="width:'+TW+'px">'+scale+'</div></div>'+
@@ -1146,8 +1238,12 @@ function onDown(e, p, gantt){
     const {t,b} = findBar(p, barEl.dataset.t, barEl.dataset.b); if (!b) return;
     S.sel = {t:t.id, b:b.id};
     const mode = !S.canWrite ? "view" : (e.target.dataset.h==="l" ? "l" : e.target.dataset.h==="r" ? "r" : "move");
-    S.drag = {mode, p, t, b, el:barEl, x0:e.clientX, s0:dn(b.start), e0:dn(b.end), moved:false, lo:S.view.lo, hi:S.view.hi, cascade:e.shiftKey};
-    if (S.canWrite) { barEl.setPointerCapture(e.pointerId); e.preventDefault(); }
+    const touch = e.pointerType==="touch";
+    S.drag = {mode, p, t, b, el:barEl, x0:e.clientX, y0:e.clientY, s0:dn(b.start), e0:dn(b.end), moved:false, lo:S.view.lo, hi:S.view.hi, cascade:e.shiftKey, touch, armed:!touch};
+    if (S.canWrite && !touch) { barEl.setPointerCapture(e.pointerId); e.preventDefault(); }
+    if (S.canWrite && touch) { const d=S.drag, pid=e.pointerId; d.timer=setTimeout(()=>{ if (S.drag!==d || d.cancel) return; d.armed=true; barEl.classList.add("dragging");
+      try{ barEl.setPointerCapture(pid); }catch(_){} try{ navigator.vibrate && navigator.vibrate(12); }catch(_){}
+      showTip({clientX:d.x0, clientY:d.y0-60}, "좌우로 끌어 날짜를 옮기세요"); }, 380); }
   } else if (tr && S.canWrite && e.pointerType!=="touch") {
     const n = dayAt(e, tr);
     const ghost = document.createElement("div"); ghost.className="bar ghost"; ghost.style.left=((n-S.view.lo)*S.view.px)+"px"; ghost.style.width=S.view.px+"px"; ghost.hidden=true; tr.appendChild(ghost);
@@ -1155,13 +1251,19 @@ function onDown(e, p, gantt){
     tr.setPointerCapture(e.pointerId); e.preventDefault();
   } else return;
   const move = ev => onMove(ev);
-  const up = ev => { window.removeEventListener("pointermove",move,true); window.removeEventListener("pointerup",up,true); window.removeEventListener("pointercancel",up,true); onUp(ev, p); };
+  const up = ev => { window.removeEventListener("pointermove",move,true); window.removeEventListener("pointerup",up,true); window.removeEventListener("pointercancel",up,true);
+    const d=S.drag; if (d && d.timer) clearTimeout(d.timer);
+    if (d && d.touch && (d.cancel || (ev.type==="pointercancel" && !d.moved))) { S.drag=null; hideTip(); d.el.classList.remove("dragging"); if (S.pendingRender) render(); return; }
+    if (d && d.touch && d.armed && !d.moved) { S.drag=null; hideTip(); d.el.classList.remove("dragging"); if (S.pendingRender) render(); return; }
+    onUp(ev, p); };
   window.addEventListener("pointermove", move, true);
   window.addEventListener("pointerup", up, true);
   window.addEventListener("pointercancel", up, true);
 }
 function onMove(e){
-  const d = S.drag; if (!d || d.mode==="view") return;
+  const d = S.drag; if (!d) return;
+  if (d.touch && !d.armed) { if (Math.abs(e.clientX-d.x0)>8 || Math.abs(e.clientY-d.y0)>8) { clearTimeout(d.timer); d.cancel=true; } return; }
+  if (d.mode==="view") return;
   const dx = e.clientX - d.x0; if (!d.moved && Math.abs(dx) < 4) return;
   d.moved = true;
   const px = S.view.px, dd = Math.round(dx/px), x = n => (n - S.view.lo)*px;
@@ -1206,6 +1308,8 @@ function onUp(e, p){
     d.b.start = ds(d.ns); d.b.end = ds(d.ne);
   }, d.mode==="move" ? (d.cascade&&shift ? "이후 일정까지 "+Math.abs(shift)+"일 "+(shift>0?"뒤로":"앞으로")+" 옮겼습니다." : mdw(d.ns)+"로 옮겼습니다.") : "기간을 "+(d.ne-d.ns+1)+"일로 조정했습니다.");
 }
+document.addEventListener("touchmove", e=>{ if (S.drag && S.drag.touch && S.drag.armed) e.preventDefault(); }, {passive:false});
+const COARSE = (()=>{ try { return matchMedia("(pointer:coarse)").matches; } catch(e){ return false; } })();
 function barKey(e, p, el){
   const {t,b} = findBar(p, el.dataset.t, el.dataset.b); if (!b) return;
   if (e.key==="Enter") { e.preventDefault(); openBar(p,t.id,b.id); return; }
@@ -1274,7 +1378,7 @@ function drawer(html, onReady){
   ov.querySelector("#scrim").addEventListener("click", closeDrawer);
   ov.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click", closeDrawer));
   const d = ov.querySelector(".drawer"); onReady && onReady(d);
-  d.querySelector("input:not([type=checkbox]):not([type=radio]),select")?.focus();
+  if (!COARSE) d.querySelector("input:not([type=checkbox]):not([type=radio]),select")?.focus();
 }
 function closeDrawer(){ document.getElementById("overlay").innerHTML=""; }
 
