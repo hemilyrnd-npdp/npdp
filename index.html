@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<base href="/npdp/">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
 <link rel="manifest" href="manifest.webmanifest">
@@ -487,12 +488,18 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut,
   sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { initializeFirestore, doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc,
-  onSnapshot, query, orderBy, limit, where, writeBatch, Bytes } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  onSnapshot, query, orderBy, limit, where, writeBatch, Bytes,
+  persistentLocalCache, persistentMultipleTabManager, clearIndexedDbPersistence, terminate } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const cfg = window.FIREBASE_CONFIG;
 const app = initializeApp(cfg);
 const auth = getAuth(app);
-const fdb = initializeFirestore(app, { ignoreUndefinedProperties: true });
+/* 기기 저장소 캐시: 다시 열 때 저장된 데이터로 먼저 그리고, 바뀐 것만 서버에서 받음. 로그아웃·접근 거부 시 삭제 */
+let fdb;
+try { fdb = initializeFirestore(app, { ignoreUndefinedProperties: true, localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
+catch (e) { fdb = initializeFirestore(app, { ignoreUndefinedProperties: true }); }
+async function wipeCache(){ try { await terminate(fdb); } catch (e) {} try { await clearIndexedDbPersistence(fdb); } catch (e) {} }
+async function outAndWipe(){ await wipeCache(); try { await signOut(auth); } catch (e) {} location.replace((document.querySelector("base") || {}).href || "./"); }
 const ROLES = { admin:"관리자", editor:"편집자", viewer:"보기" };
 const LINK_KEY = "npdp.emailForSignIn";
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -602,9 +609,9 @@ function loginScreen(msg){
       document.getElementById("g-back").onclick = () => loginScreen(); }
     catch (e) { loginScreen("링크를 보내지 못했습니다. 주소를 확인해 주세요. (" + esc(e.code || "") + ")"); } };
 }
-function deniedScreen(email){
+function deniedScreen(email){ wipeCache();
   gate('<h2>초대받지 않은 계정입니다</h2><p class="gate-sub"><b>' + esc(email) + '</b> 은(는) 초대 명단에 없습니다.</p><p class="gate-foot">다른 계정으로 로그인하거나, 관리자에게 이 메일 주소로 초대를 요청하세요.</p><button class="btn primary" id="g-out" type="button">다른 계정으로 로그인</button>');
-  document.getElementById("g-out").onclick = () => signOut(auth);
+  document.getElementById("g-out").onclick = () => outAndWipe();
 }
 
 /* ---------- boot ---------- */
@@ -637,7 +644,7 @@ onAuthStateChanged(auth, async u => {
 
 /* ---------- account menu + member admin (called from the board's top bar) ---------- */
 window.npdpAccount = () => ME ? { email: ME.email, name: ME.name, role: ME.role, roleName: ROLES[ME.role] } : null;
-window.npdpSignOut = () => signOut(auth);
+window.npdpSignOut = () => outAndWipe();
 window.openMembers = function openMembers(){
   if (!ME || ME.role !== "admin") return;
   const rows = () => Object.entries(MEMBERS).sort((a, b) => (a[1].role === "admin" ? 0 : a[1].role === "editor" ? 1 : 2) - (b[1].role === "admin" ? 0 : b[1].role === "editor" ? 1 : 2) || a[0].localeCompare(b[0]))
@@ -713,11 +720,32 @@ const S = { db:null, dl:null, products:{}, canWrite:true, loaded:false, zoom:"fi
 try { const z = localStorage.getItem("npdp-zoom"); if (z) S.zoom = z; S.hideEmpty = localStorage.getItem("npdp-hide")==="1"; } catch(e) {}
 const inflight = {}, dirty = {};
 
-function route(){
+/* 주소: 홈 = BASE, 런칭 완료 = BASE+"archive", 제품 = BASE+"p/<id>"  (예전 #p-<id> 링크도 자동으로 새 주소로 바꿈) */
+const BASE = (()=>{ const b=document.querySelector("base"); if (b) { try { return new URL(b.href).pathname; } catch(e){} }
+  const m=location.pathname.match(/^(.*?\/)(?:p\/[^/]+|archive)\/?$/); return m ? m[1] : location.pathname.replace(/[^/]*$/,""); })();
+const URLP = { home: BASE, archive: BASE+"archive", product: id => BASE+"p/"+encodeURIComponent(id) };
+function routeKey(){
   const h = location.hash.replace(/^#/, "");
-  if (h.startsWith("p-") && S.products[h.slice(2)]) return {view:"product", pid:h.slice(2)};
-  return {view:"home", tab: h==="archive" ? "done" : "active"};
+  if (h.startsWith("p-")) return {view:"product", pid:h.slice(2), legacy:true};
+  if (h==="archive") return {view:"home", tab:"done", legacy:true};
+  if (h==="home") return {view:"home", tab:"active", legacy:true};
+  const rest = location.pathname.startsWith(BASE) ? location.pathname.slice(BASE.length) : "";
+  const m = rest.match(/^p\/([^/]+)\/?$/); if (m) return {view:"product", pid:decodeURIComponent(m[1])};
+  if (/^archive\/?$/.test(rest)) return {view:"home", tab:"done"};
+  return {view:"home", tab:"active"};
 }
+function route(){
+  const r = routeKey();
+  if (r.view==="product" && S.products[r.pid]) return r;
+  if (r.view==="product") return {view:"home", tab:"active"};
+  return r;
+}
+function nav(path, replace){ /* path: URLP.* 값 */
+  const q = location.search; const url = path + q;
+  if (replace) history.replaceState(null, "", url); else history.pushState(null, "", url);
+  onRoute();
+}
+function onRoute(){ closeDrawer(); const r=routeKey(); if (r.view==="home" && !S.full) loadAll(); render(); const m=document.getElementById("main"); if (m) m.scrollTop=0; }
 function isArchived(p){ const L=launchOf(p); if(L===null) return false; return TODAY > L + 14; }
 const sorted = () => Object.values(S.products).sort((a,b)=>(a.order??0)-(b.order??0) || String(a.name).localeCompare(b.name,"ko"));
 
@@ -876,18 +904,18 @@ async function openActivity(){
     const recent=Object.values(S.products).filter(p=>p.lastChange).sort((a,b)=>b.lastChange.at.localeCompare(a.lastChange.at));
     let del=[]; try { del=(await S.db.collection("deleted").orderBy("at","desc").limit(50).get()).docs.map(x=>({id:x.id,...x.data()})); } catch(e){}
     let html='<div class="h-day">최근 수정된 제품</div>';
-    html += recent.length ? recent.map(p=>'<a class="h-row" href="#p-'+p.id+'" data-hist="'+p.id+'"><span class="h-name">'+esc(p.name)+'</span><span><b data-uid="'+esc(p.lastChange.by||"")+'" data-fb="'+esc(p.lastChange.byName||"")+'">…</b> · '+ago(p.lastChange.at)+'</span></a>').join("") : '<div class="note">기록된 수정이 아직 없습니다.</div>';
+    html += recent.length ? recent.map(p=>'<a class="h-row" href="'+URLP.product(p.id)+'" data-hist="'+p.id+'"><span class="h-name">'+esc(p.name)+'</span><span><b data-uid="'+esc(p.lastChange.by||"")+'" data-fb="'+esc(p.lastChange.byName||"")+'">…</b> · '+ago(p.lastChange.at)+'</span></a>').join("") : '<div class="note">기록된 수정이 아직 없습니다.</div>';
     if (del.length) {
       html+='<div class="h-day">삭제된 제품</div>'+del.map((x,i)=>'<div class="h-snap"><div><b>'+esc(x.name)+'</b><div class="muted"><span data-uid="'+esc(x.by||"")+'" data-fb="'+esc(x.byName||"")+'">…</span>님이 '+stamp(x.at)+'에 삭제</div></div>'+
         (S.canWrite?'<button class="btn" type="button" data-revive="'+i+'">되살리기</button>':'')+'</div>').join("");
     }
     body.innerHTML=html; fillNames(body);
-    body.querySelectorAll("[data-hist]").forEach(a=>a.addEventListener("click",e=>{ e.preventDefault(); closeDrawer(); location.hash="p-"+a.dataset.hist; setTimeout(()=>{ const p=S.products[a.dataset.hist]; if(p) openHistory(p); },300); }));
+    body.querySelectorAll("[data-hist]").forEach(a=>a.addEventListener("click",e=>{ e.preventDefault(); closeDrawer(); nav(URLP.product(a.dataset.hist)); setTimeout(()=>{ const p=S.products[a.dataset.hist]; if(p) openHistory(p); },300); }));
     body.querySelectorAll("[data-revive]").forEach(btn=>btn.addEventListener("click",()=>{
       const x=del[+btn.dataset.revive]; let data; try{ data=JSON.parse(x.data); }catch(e){ toast("삭제된 데이터를 읽을 수 없습니다."); return; }
       if (S.products[x.id]) { toast("같은 제품이 이미 보드에 있습니다."); return; }
       commit(x.id, ()=>{ S.products[x.id]={...data, id:x.id}; }, "‘"+x.name+"’을(를) 되살렸습니다.", "revive");
-      closeDrawer(); location.hash="p-"+x.id;
+      closeDrawer(); nav(URLP.product(x.id));
     }));
   });
 }
@@ -932,13 +960,14 @@ function acctHtml(){ const a = window.npdpAccount && window.npdpAccount(); if (!
   return (window.npdpCanInstall && window.npdpCanInstall() ? '<button class="btn inst-btn" id="btn-install" type="button">📲 앱 설치</button>' : '')+'<span class="acct" title="'+esc(a.email)+'"><span class="acct-name">'+esc(a.name)+'</span><span class="acct-role">'+esc(a.roleName)+'</span><button class="btn ghost" id="btn-out" type="button">로그아웃</button></span>'; }
 function wireAcct(root){ root.querySelector("#btn-out")?.addEventListener("click", ()=>window.npdpSignOut&&window.npdpSignOut());
   root.querySelector("#btn-install")?.addEventListener("click", ()=>window.npdpInstall&&window.npdpInstall()); }
-const SHARE_URL = "https://hemilyrnd-npdp.github.io/npdp/?v=2";
-async function copyShareLink(){
+const SHARE_URL = "https://hemilyrnd-npdp.github.io/npdp/?v=2"; window.SHARE_URL_BOARD = SHARE_URL;
+async function copyShareLink(urlArg){
+  const url = typeof urlArg==="string" ? urlArg : SHARE_URL;
   let ok=false;
-  try { await navigator.clipboard.writeText(SHARE_URL); ok=true; } catch(e){}
-  if (!ok) { try { const ta=document.createElement("textarea"); ta.value=SHARE_URL; ta.style.cssText="position:fixed;opacity:0"; document.body.append(ta); ta.select(); ok=document.execCommand("copy"); ta.remove(); } catch(e){} }
+  try { await navigator.clipboard.writeText(url); ok=true; } catch(e){}
+  if (!ok) { try { const ta=document.createElement("textarea"); ta.value=url; ta.style.cssText="position:fixed;opacity:0"; document.body.append(ta); ta.select(); ok=document.execCommand("copy"); ta.remove(); } catch(e){} }
   if (ok) { toast("공유 링크를 복사했습니다. 카톡·메일에 붙여넣으세요."); return; }
-  drawer('<h3>공유 링크</h3><div class="ctx">아래 주소를 복사해 카톡·메일로 보내세요. 썸네일이 함께 표시됩니다.</div><div class="field"><input id="sh-url" readonly value="'+SHARE_URL+'"></div><div class="dactions"><div class="spacer"></div><button class="btn ghost" data-close type="button">닫기</button></div>',
+  drawer('<h3>공유 링크</h3><div class="ctx">아래 주소를 복사해 카톡·메일로 보내세요. 썸네일이 함께 표시됩니다.</div><div class="field"><input id="sh-url" readonly value="'+url+'"></div><div class="dactions"><div class="spacer"></div><button class="btn ghost" data-close type="button">닫기</button></div>',
     d=>{ const i=d.querySelector("#sh-url"); i.focus(); i.select(); });
 }
 function sortDay(p){ const L=launchOf(p); return L!==null ? L : (expectDay(p) ?? 1e9); }
@@ -973,7 +1002,7 @@ function renderTop(r){
     wireAcct(top);
   } else {
     const p = S.products[r.pid];
-    top.innerHTML = '<nav class="crumb"><a href="'+(isArchived(p)?"#archive":"#home")+'" class="btn ghost" id="back">'+(isArchived(p)?"← 런칭 완료 목록":"← 전체 제품")+'</a><span class="sep">/</span>'+
+    top.innerHTML = '<nav class="crumb"><a href="'+(isArchived(p)?URLP.archive:URLP.home)+'" class="btn ghost" id="back">'+(isArchived(p)?"← 런칭 완료 목록":"← 전체 제품")+'</a><span class="sep">/</span>'+
       (S.canWrite?'<button type="button" class="thumb sm" id="pimg" title="제품 이미지 바꾸기" aria-label="제품 이미지 바꾸기">'+thumbInner(p)+'</button>':'<span class="thumb sm">'+thumbInner(p)+'</span>')+
       '<input class="pname" id="pname" aria-label="제품명" value="'+esc(p.name)+'" '+(S.canWrite?"":"readonly")+' size="'+Math.max(4,Math.min(30,[...p.name].length+2))+'"></nav>'+(p.hidden&&S.isAdmin?'<span class="hid-tag big" title="관리자만 볼 수 있습니다">🔒 일정 숨김</span>':'')+ro+'<div class="ptools" id="tools"></div>';
     top.querySelector("#pimg")?.addEventListener("click", ()=>openInfo(p));
@@ -1019,9 +1048,9 @@ function renderHome(){
     if (L!==null && L>=lo && L<=hi) segs+='<div class="launch" style="left:'+pct(L)+'%" title="런칭 '+md(L)+'"></div>';
     const nTasks=(p.tasks||[]).length, nWith=(p.tasks||[]).filter(t=>(t.bars||[]).length).length;
     const st = rangeOf(p); const started = !!st && st[0] <= TODAY;
-    rows += '<div class="prow'+(started?' started':'')+'"><div class="pcell"><span class="no num">'+String(rank[p.id]).padStart(2,"0")+'</span><a class="tlink" href="#p-'+p.id+'" tabindex="-1" aria-hidden="true">'+thumb(p)+'</a><div class="pbody"><a class="plink" href="#p-'+p.id+'">'+esc(p.name)+(p.hidden&&S.isAdmin?'<span class="hid-tag" title="관리자만 볼 수 있습니다 (편집자·보기 권한에게는 숨김)">🔒 일정 숨김</span>':'')+'</a>'+infoHtml(p)+planTag(p)+'</div></div>'+
+    rows += '<div class="prow'+(started?' started':'')+'"><div class="pcell"><span class="no num">'+String(rank[p.id]).padStart(2,"0")+'</span><a class="tlink" href="'+URLP.product(p.id)+'" tabindex="-1" aria-hidden="true">'+thumb(p)+'</a><div class="pbody"><a class="plink" href="'+URLP.product(p.id)+'">'+esc(p.name)+(p.hidden&&S.isAdmin?'<span class="hid-tag" title="관리자만 볼 수 있습니다 (편집자·보기 권한에게는 숨김)">🔒 일정 숨김</span>':'')+'</a>'+infoHtml(p)+planTag(p)+'</div></div>'+
       '<div>'+dday+'</div><div class="owner">'+esc(p.owner||"—")+'</div><div class="next">'+next+'</div>'+
-      '<div><a href="#p-'+p.id+'" class="strip" style="display:block" aria-label="'+esc(p.name)+' 일정 열기">'+mdivs+'<div class="lane"></div>'+segs+
+      '<div><a href="'+URLP.product(p.id)+'" class="strip" style="display:block" aria-label="'+esc(p.name)+' 일정 열기">'+mdivs+'<div class="lane"></div>'+segs+
       (TODAY>=lo&&TODAY<=hi?'<div class="tl" style="left:'+pct(TODAY)+'%"></div>':'')+'</a></div></div>';
   });
   const edges=[lo, ...ticks, hi];
@@ -1041,8 +1070,8 @@ function renderHome(){
       ddHtml("q","출시","출시 분기 필터", ["전체",...quarters].map(o=>({v:o, n:o==="전체"?null:list.filter(p=>qOf(p)===o).length})), S.q)+
       ddHtml("owner","담당","담당자 필터", owners.map(o=>({v:o, n:o==="전체"?null:list.filter(p=>p.owner===o).length})), S.owner)+
     '</div></div>'+
-    '<nav class="tabs" aria-label="목록 구분"><a href="#home" class="tab" aria-current="'+(!tabDone?"page":"false")+'">진행 중 <span class="num">'+activeCnt+'</span></a>'+
-      '<a href="#archive" class="tab" aria-current="'+(tabDone?"page":"false")+'">런칭 완료 <span class="num">'+doneCnt+'</span></a>'+
+    '<nav class="tabs" aria-label="목록 구분"><a href="'+URLP.home+'" class="tab" aria-current="'+(!tabDone?"page":"false")+'">진행 중 <span class="num">'+activeCnt+'</span></a>'+
+      '<a href="'+URLP.archive+'" class="tab" aria-current="'+(tabDone?"page":"false")+'">런칭 완료 <span class="num">'+doneCnt+'</span></a>'+
       (tabDone?'':'<span class="urg-legend" id="urg-legend">※<span class="urg-scale" aria-hidden="true"></span>런칭 임박(90일 이내)</span>')+'</nav>'+
     '<div class="board">'+body+'</div>'+
     '<div class="legend">'+CATS.map(([,n],i)=>'<span><i style="background:var(--c'+i+')"></i>'+n+'</span>').join("")+'<span><i style="background:var(--c6)"></i>기타(원료 대안 등)</span><span><i style="background:var(--today);width:2px"></i>오늘 · ◆ 런칭예정일</span></div></section>';
@@ -1154,6 +1183,7 @@ function renderProduct(pid){
       '<button class="btn" type="button" id="fold-all">'+(gs.every((g,gi)=>S.closed[pid+"|"+gi+"|"+g.main])?"모두 펼치기":"모두 접기")+'</button>'+
       (S.canWrite?'<button class="btn" type="button" id="add-task">＋ 공정</button><button class="btn" type="button" id="bulk">일괄 이동</button>':'')+
       '<button class="btn" type="button" id="csv">CSV</button>'+
+      '<button class="btn" type="button" id="plink" title="이 제품 일정 바로가기 주소를 복사합니다">🔗 링크</button>'+
       (S.isAdmin?'<button class="btn vis-btn" type="button" id="vis" aria-pressed="'+!!p.hidden+'" title="켜면 관리자를 뺀 모든 사람(편집자·보기)에게 이 제품 일정표가 보이지 않습니다">'+(p.hidden?'🔒 일정 숨김 켜짐':'🔓 일정 숨김 꺼짐')+'</button>':'')+
       (S.canWrite?'<button class="btn ghost" type="button" id="undo" title="Ctrl+Z">되돌리기</button>':'')+
       '<button class="btn ghost" type="button" id="hist">변경 기록</button>'+
@@ -1184,6 +1214,7 @@ function bindProduct(p, gantt){
   main.querySelector("#bulk")?.addEventListener("click",()=>openBulk(p));
   main.querySelector("#undo")?.addEventListener("click",undo);
   main.querySelector("#del-prod")?.addEventListener("click",()=>openDeleteProduct(p));
+  main.querySelector("#plink")?.addEventListener("click",()=>copyShareLink(location.origin+URLP.product(p.id)));
   main.querySelector("#vis")?.addEventListener("click",()=>{ const on=!p.hidden;
     commit(p.id,()=>{ if(on) S.products[p.id].hidden=true; else delete S.products[p.id].hidden; }, on?"일정을 숨겼습니다. 이제 관리자만 볼 수 있습니다.":"일정 숨김을 껐습니다. 모두에게 다시 보입니다."); });
   const ow = main.querySelector("#owner");
@@ -1708,7 +1739,7 @@ function openNewProduct(){
       const np={id,name,owner,order,tasks,createdAt:new Date().toISOString()};
       if (L!==null && !allBars(np).some(({t})=>isLaunchTask(t))) launchTaskOf(np,true).bars.push({id:uid("b"),start:ds(L),end:ds(L),label:"런칭",done:false});
       commit(id,()=>{ S.products[id]=np; },"‘"+name+"’ 일정표를 만들었습니다.");
-      closeDrawer(); location.hash="p-"+id;
+      closeDrawer(); nav(URLP.product(id));
     });
   });
 }
@@ -1778,7 +1809,7 @@ function openBulk(p){
 function openDeleteProduct(p){
   drawer('<h3>제품 삭제</h3><p>‘'+esc(p.name)+'’ 일정표와 공정 '+p.tasks.length+'개, 일정 '+allBars(p).length+'건을 보드에서 지웁니다. 삭제한 뒤에도 첫 화면의 ‘변경 기록’에서 되살릴 수 있습니다.</p>'+
     '<div class="dactions"><button class="btn primary" style="background:var(--today);border-color:var(--today)" id="x-go" type="button">삭제</button><div class="spacer"></div><button class="btn ghost" data-close type="button">취소</button></div>',
-  d=>d.querySelector("#x-go").addEventListener("click",()=>{ closeDrawer(); location.hash="home"; commit(p.id,()=>{ delete S.products[p.id]; },"‘"+p.name+"’을(를) 삭제했습니다."); }));
+  d=>d.querySelector("#x-go").addEventListener("click",()=>{ closeDrawer(); nav(URLP.home); commit(p.id,()=>{ delete S.products[p.id]; },"‘"+p.name+"’을(를) 삭제했습니다."); }));
 }
 
 
@@ -1824,7 +1855,16 @@ function render(){
   renderTop(r);
   if (r.view==="product") renderProduct(r.pid); else renderHome();
 }
-window.addEventListener("hashchange", ()=>{ closeDrawer(); render(); document.getElementById("main").scrollTop=0; });
+window.addEventListener("popstate", onRoute);
+window.addEventListener("hashchange", ()=>{ const r=routeKey(); if (r.legacy) nav(r.view==="product"?URLP.product(r.pid):(r.tab==="done"?URLP.archive:URLP.home), true); });
+/* 보드 안 링크는 새로고침 없이 이동 (Ctrl/가운데 클릭은 새 탭) */
+document.addEventListener("click", e=>{
+  const a = e.target.closest && e.target.closest("a[href]"); if (!a || e.defaultPrevented) return;
+  if (e.button!==0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target) return;
+  let u; try { u = new URL(a.href, location.href); } catch(_) { return; }
+  if (u.origin!==location.origin || !u.pathname.startsWith(BASE) || u.hash) return;
+  e.preventDefault(); if (u.pathname!==location.pathname) nav(u.pathname);
+});
 let rz; window.addEventListener("resize", ()=>{ clearTimeout(rz); rz=setTimeout(()=>{ if(S.zoom==="fit") render(); },150); });
 
 /* ---------- boot ---------- */
@@ -1839,19 +1879,44 @@ let rz; window.addEventListener("resize", ()=>{ clearTimeout(rz); rz=setTimeout(
   window.claude.use("assets").then(x=>{ S.assets=x; }).catch(()=>{});
   window.claude.use("user").then(async u=>{ if(!u) return; S.user=u; S.isAdmin=!!u.isAdmin; try{ S.me = await u.id(); }catch(e){} const c = await u.can("data.write"); if (c===false) { S.canWrite=false; } render(); }).catch(()=>{});
   S.imgs = {};
+  const r0 = routeKey();
+  if (r0.legacy) history.replaceState(null, "", (r0.view==="product"?URLP.product(r0.pid):(r0.tab==="done"?URLP.archive:URLP.home)) + location.search);
+  if (r0.view==="product") loadOne(r0.pid, timer, fail); else loadAll(timer, fail);
+})();
+/* 제품 링크로 바로 들어오면 그 제품 1개만 불러옴 → 전체 목록은 홈으로 갈 때 불러옴 */
+function applyProduct(id, inc){
+  if (inflight[id]||dirty[id]) return false;
+  const cur = S.products[id];
+  if (cur && stable(clean(cur))===stable(inc)) return false;
+  S.products[id] = {...JSON.parse(JSON.stringify(inc)), id}; return true;
+}
+let oneUnsub = null;
+function loadOne(pid, timer, fail){
+  const db = S.db;
+  try { db.doc("images/"+pid).onSnapshot(d=>{ const v = d && d.exists && d.data(); if (v && v.src) { S.imgs = {...S.imgs, [pid]: v.src}; if (S.loaded) render(); } }, ()=>{}); } catch(_){}
+  oneUnsub = db.doc("products/"+pid).onSnapshot(d=>{
+    clearTimeout(timer);
+    if (S.full) return;
+    if (!d.exists) { if (!S.loaded) { S.loaded = true; nav(URLP.home, true); toast("제품을 찾을 수 없어 전체 목록으로 이동했습니다."); } return; }
+    const changed = applyProduct(pid, d.data());
+    if (!S.loaded) { S.loaded = true; render(); } else if (changed) render();
+  }, err=>{ clearTimeout(timer); S.loaded = true; nav(URLP.home, true); toast("이 제품 일정을 열 수 없습니다. 전체 목록으로 이동했습니다."); });
+}
+function loadAll(timer, fail){
+  if (S.full) return; S.full = true;
+  const db = S.db;
   db.collection("images").onSnapshot(snap=>{ const m={}; snap.docs.forEach(d=>{ const v=d.data(); if(v&&v.src) m[d.id]=v.src; }); S.imgs=m; if(S.loaded) render(); }, ()=>{});
   db.collection("products").onSnapshot(snap=>{
-    clearTimeout(timer);
+    if (timer) clearTimeout(timer);
+    try { oneUnsub && oneUnsub(); } catch(_){} oneUnsub = null;
     const seen = new Set();
-    snap.docs.forEach(doc=>{ seen.add(doc.id); if (inflight[doc.id]||dirty[doc.id]) return;
-      const inc = doc.data(), cur = S.products[doc.id];
-      if (cur && stable(clean(cur))===stable(inc)) return;
-      S.products[doc.id] = {...JSON.parse(JSON.stringify(inc)), id:doc.id}; });
+    snap.docs.forEach(doc=>{ seen.add(doc.id); applyProduct(doc.id, doc.data()); });
     Object.keys(S.products).forEach(id=>{ if(!seen.has(id) && !inflight[id] && !dirty[id]) delete S.products[id]; });
     S.loaded = true;
     render();
-  }, err=>{ clearTimeout(timer); fail("일정을 불러오지 못했습니다 ("+esc(err.code)+"). 잠시 후 새로 고쳐 주세요."); });
-})();
+  }, err=>{ if (timer) clearTimeout(timer); if (fail) fail("일정을 불러오지 못했습니다 ("+esc(err.code)+"). 잠시 후 새로 고쳐 주세요."); });
+}
+(function(){})();
 </script>
 
 </body>
