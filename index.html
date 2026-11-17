@@ -1488,12 +1488,13 @@ function openInfo(p, focus){
   d=>{
     const readPack = ()=>({u:d.querySelector("#i-pku").value, lv:[...d.querySelectorAll(".pkrow")].map(r=>({name:r.querySelector(".pk-name").value.trim(), n:numOf(r.querySelector(".pk-cnt")?.value), w:numOf(r.querySelector(".pk-w").value)})).filter(x=>x.name||x.w).map(x=>{ const o={name:x.name}; if(x.n) o.n=x.n; if(x.w) o.w=x.w; return o; })});
     const perSel = d.querySelector("#i-per");
+    // 가격 기준 단위는 '몇 번째 단계'로 기억 → 단위 이름을 고쳐도 선택이 따라감
+    let perIdx = Math.max(0, packCalc(pk).lv.findIndex(x=>x.name===pr.per));
+    perSel.addEventListener("change", ()=>{ perIdx = Math.max(0, perSel.selectedIndex-1); });
     const refresh = ()=>{
       const pack = readPack(), {u,lv} = packCalc(pack);
-      const cur = perSel.value || pr.per || "";
-      const names = lv.map(x=>x.name);
-      perSel.innerHTML = '<option value="">단위 선택</option>'+names.map(n=>'<option'+(n===cur?" selected":"")+'>'+esc(n)+'</option>').join("")+(cur&&!names.includes(cur)?'<option selected>'+esc(cur)+'</option>':'');
-      if (!cur && names.length) perSel.value = names[0];
+      const names = lv.map(x=>x.name), cur = names[Math.min(perIdx, names.length-1)] || "";
+      perSel.innerHTML = '<option value="">단위 선택</option>'+names.map(n=>'<option'+(n===cur?" selected":"")+'>'+esc(n)+'</option>').join("");
       // 자동 계산 중량을 빈 칸 안내로 표시
       const rows=[...d.querySelectorAll(".pkrow")], filled=rows.filter(r=>r.querySelector(".pk-name").value.trim()||numOf(r.querySelector(".pk-w").value));
       filled.forEach((r,k)=>{ const x=lv[k]; const w=r.querySelector(".pk-w"); w.placeholder = x&&x.auto ? "자동 "+fmtN(x.w) : "중량"; });
@@ -1501,8 +1502,8 @@ function openInfo(p, focus){
       const h = specHtml(tmp).replace(/^<button[^>]*>/,"").replace(/<\/button>$/,"").replace(/<span class="pk-ed"[^>]*>✎<\/span>/,"");
       d.querySelector("#i-pkprev").innerHTML = '<span class="pspec in-note">'+h+'</span>';
     };
-    d.querySelectorAll(".pkrow input, #i-pku, #i-price, #i-per").forEach(el=>el.addEventListener("input", refresh));
-    perSel.addEventListener("change", refresh);
+    d.querySelectorAll(".pkrow input, #i-pku, #i-price").forEach(el=>el.addEventListener("input", refresh));
+    perSel.addEventListener("change", ()=>setTimeout(refresh));
     d.querySelector("#i-price").addEventListener("blur", e=>{ const v=numOf(e.target.value); e.target.value = v?fmtN(v):""; });
     refresh();
     if (focus==="spec") { const sp=d.querySelector("#i-spec"); sp.scrollIntoView({block:"start"}); if(!COARSE) sp.querySelector(".pk-name")?.focus(); }
