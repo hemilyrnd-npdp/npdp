@@ -199,6 +199,44 @@ button.thumb:hover{border-color:var(--accent)}
 .vis-btn[aria-pressed="true"]{background:#ffe45c;color:#b3261e;border-color:#d93025;font-weight:700}
 .vis-btn[aria-pressed="true"]:hover{background:#ffd93d;border-color:#b3261e}
 .pinfo-btn{font-size:12.5px}
+.pinfo-col{display:inline-flex;flex-direction:column;align-items:stretch;gap:4px;min-width:0}
+.pinfo-col > .pspec{width:0;min-width:100%;box-sizing:border-box}
+.pspec{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:10px;row-gap:3px;min-height:26px;padding:4px 10px;border:1px dashed var(--line-strong);border-radius:7px;background:var(--sunk);color:var(--muted);font:inherit;font-size:12px;text-align:left;cursor:pointer;flex-wrap:wrap;row-gap:2px}
+.pspec:hover{border-color:var(--accent);border-style:solid}
+.pspec.pspec-none{display:flex;color:var(--faint);justify-content:center}
+.sp-l{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.02em}
+.pspec .pr{grid-column:2}
+.pspec.pspec-none:hover{color:var(--accent)}
+.pspec .sep{color:var(--line-strong)}
+.pk-chain{display:inline-flex;align-items:center;gap:0;flex-wrap:wrap;row-gap:2px}
+.pk{display:inline-flex;align-items:baseline;gap:4px;padding:1px 7px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
+.pk.outer{border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
+.pk-n{font-size:11px;color:var(--muted)}
+.pk b,.pr b{font-weight:700;color:var(--fg);font-size:12.5px}
+.pk b small,.pr b small{font-weight:500;font-size:10.5px;margin-left:1px;color:var(--muted)}
+.pk b.auto{font-style:italic}
+.pk b.miss{color:var(--faint)}
+.pk-x{display:inline-flex;align-items:center;font-size:10.5px;color:var(--muted);padding:0 3px 0 4px;white-space:nowrap}
+.pk-x::before{content:"›";font-size:14px;line-height:1;color:var(--line-strong);margin-right:3px}
+.pk-x::after{content:"›";font-size:14px;line-height:1;color:var(--line-strong);margin-left:3px}
+.pk-x:empty::after{display:none}
+.pk-none{color:var(--faint)}
+.pr{display:inline-flex;align-items:baseline;gap:5px;flex-wrap:wrap}
+.pr-per{font-size:11px;color:var(--muted);margin-left:-3px}
+.pr-sub{font-size:11px;color:var(--muted);padding-left:7px;border-left:1px solid var(--line)}
+.pk-ed{grid-row:1 / span 2;grid-column:3;color:var(--muted);align-self:center}
+.pspec.in-note{border:0;background:none;padding:0;cursor:default;min-height:0;display:grid;grid-template-columns:auto minmax(0,1fr)}
+.pkgrid{display:grid;gap:6px}
+.pkhead,.pkrow{display:grid;grid-template-columns:74px minmax(0,1fr) 54px 92px;gap:6px;align-items:center}
+.pkhead{font-size:11px;color:var(--muted)}
+.pk-uh{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.pkgrid .pk-uh select{width:46px;flex:none;height:22px;border:1px solid var(--line-strong);border-radius:5px;background:var(--bg);font-size:11px;padding:0 2px}
+.pk-lab{font-size:11px;color:var(--muted);line-height:1.2;word-break:keep-all}
+.pkrow input{height:32px;border:1px solid var(--line-strong);border-radius:7px;padding:0 8px;background:var(--bg);min-width:0;width:100%;box-sizing:border-box}
+.pkrow input:focus{border-color:var(--accent);outline:none}
+.pkrow .pk-cnt,.pkrow .pk-w{text-align:right}
+.pk-cnt-na{text-align:center;color:var(--faint)}
+.pk-prev{min-height:20px}
 .plink .no{display:inline-block;min-width:22px;margin-right:6px;font-size:11.5px;font-weight:500;color:var(--faint)}
 .empty{padding:40px 20px;text-align:center;color:var(--muted)}
 .empty h3{margin:0 0 6px;color:var(--fg);font-size:16px}
@@ -445,6 +483,8 @@ button.thumb:hover{border-color:var(--accent)}
   .ptools > .spacer{display:none}
   .pmeta{flex:1 1 100%;flex-wrap:wrap;gap:6px 10px}
   .pinfo-btn{height:auto;min-height:28px;padding:3px 9px;white-space:normal;text-align:left}
+  .pinfo-col{flex:1 1 100%}
+  .pspec{padding:4px 9px}
   .pbtns{display:flex;flex:1 1 100%;min-width:0;max-width:100%;gap:5px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:3px;scrollbar-width:thin}
   .pbtns > *{flex:none}
   .drawer{box-sizing:border-box;width:100vw;max-width:100vw;border-left:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
@@ -796,6 +836,8 @@ function diffLines(a, b){
   const out=[];
   if (a.name!==b.name) out.push("제품명: "+a.name+" → "+b.name);
   { const ia=a.info||{}, ib=b.info||{}; [["cat","카테고리"],["channel","채널"],["moq","MOQ"],["sales","매출액"]].forEach(([k,n])=>{ if((ia[k]||"")!==(ib[k]||"")) out.push(n+": "+(ia[k]||"없음")+" → "+(ib[k]||"없음")); }); }
+  { const ka=packText(a), kb=packText(b); if (ka!==kb) out.push("내용량: "+(ka||"없음")+" → "+(kb||"없음"));
+    const pa=priceText(a), pb=priceText(b); if (pa!==pb) out.push("판매가: "+(pa||"없음")+" → "+(pb||"없음")); }
   if ((a.expect||"")!==(b.expect||"")) out.push("예상 런칭 시기: "+(a.expect||"없음")+" → "+(b.expect||"없음"));
   if ((a.owner||"")!==(b.owner||"")) out.push("담당: "+(a.owner||"없음")+" → "+(b.owner||"없음"));
   if (!!a.hidden!==!!b.hidden) out.push(b.hidden?"일정 숨김 켜짐 (관리자만 보임)":"일정 숨김 꺼짐 (모두에게 보임)");
@@ -1173,7 +1215,8 @@ function renderProduct(pid){
   document.getElementById("tools").innerHTML =
     '<div class="pmeta"><span>담당 <input id="owner" value="'+esc(p.owner||"")+'" '+(S.canWrite?"":"readonly")+' aria-label="담당자"></span>'+
       '<button type="button" class="dday num launch-btn" id="launch" title="런칭일 변경">'+(L===null?"런칭일 설정":(L>=TODAY?"런칭 "+md(L)+" · D-"+(L-TODAY):"런칭 "+md(L)))+' <span aria-hidden="true">✎</span></button>'+
-      '<button type="button" class="btn pinfo-btn" id="pinfo" title="카테고리·채널·MOQ·매출액·이미지">'+infoHtml(p)+' <span aria-hidden="true">✎</span></button>'+
+      '<div class="pinfo-col"><button type="button" class="btn pinfo-btn" id="pinfo" title="카테고리·채널·MOQ·매출액·이미지">'+infoHtml(p)+' <span aria-hidden="true">✎</span></button>'+
+      specHtml(p)+'</div>'+
       (p.plan?'<span class="ptag inline">'+esc([p.plan.year+" "+p.plan.quarter+" 출시 계획", p.plan.line, p.plan.channel, p.plan.target].join(" · "))+'</span>':'')+
       (S.canWrite && !allBars(p).length ? '<span class="hint" style="color:var(--accent)">공정 줄의 빈 칸을 끌거나 더블클릭해 첫 일정을 만드세요</span>' : '')+
       '</div><div class="spacer"></div>'+
@@ -1221,6 +1264,7 @@ function bindProduct(p, gantt){
   ow.addEventListener("change",()=>{ const v=ow.value.trim(); if(v===p.owner) return; commit(p.id,()=>{p.owner=v;},"담당자를 바꿨습니다."); });
   main.querySelector("#add-task")?.addEventListener("click",()=>openTask(p,null));
   main.querySelector("#pinfo").addEventListener("click",()=>openInfo(p));
+  main.querySelector("#pspec")?.addEventListener("click",()=>openInfo(p, "spec"));
   watchDetails(p.id);
   main.querySelector("#launch").addEventListener("click",()=>{ if(S.canWrite) openLaunch(p); else toast("보기 전용 권한입니다."); });
   gantt.querySelectorAll(".rab").forEach(btn=>btn.addEventListener("click",e=>{
@@ -1373,6 +1417,38 @@ function infoText(p){ const i=p.info||{}; return [(i.cat||"카테고리 미정")
 function infoHtml(p){ const i=p.info||{}, ci=PCATS.findIndex(c=>c[0]===i.cat);
   const sep='<span class="sep" aria-hidden="true">│</span>';
   return '<span class="info">'+(ci>=0?'<span class="pcat" style="--pc:var(--pc'+ci+')">'+esc(i.cat)+'</span>':'<span>카테고리 미정</span>')+sep+'<span>채널: '+esc(i.channel||"—")+'</span>'+sep+'<span>MOQ: '+esc(i.moq||"—")+'</span>'+sep+'<span>매출액: '+esc(i.sales||"—")+'</span></span>'; }
+/* 내용량(포장 단위) · 판매가 — info.pack = {u:"g"|"mL", lv:[{name,n,w} 겉→낱개]}, info.price = {v, per} */
+const PACK_NAMES = ["카톤박스","세트","케이스","박스","팩","파우치","포","스틱","병","개"];
+function numOf(v){ const n=parseFloat(String(v??"").replace(/[^0-9.]/g,"")); return isFinite(n)&&n>0 ? n : 0; }
+function fmtN(n){ return (Math.round(n*100)/100).toLocaleString("ko-KR"); }
+function packCalc(pk){
+  const u = (pk&&pk.u)==="mL" ? "mL" : "g";
+  const lv = ((pk&&pk.lv)||[]).map(x=>({name:String(x.name||"").trim(), n:numOf(x.n), w:numOf(x.w), auto:false})).filter(x=>x.name||x.w);
+  lv.forEach(x=>{ if(!x.name) x.name="단위"; });
+  for (let i=lv.length-2;i>=0;i--) if (!lv[i].w && lv[i].n && lv[i+1].w) { lv[i].w = lv[i].n*lv[i+1].w; lv[i].auto=true; }
+  // 낱개(맨 안쪽) 몇 개가 들어 있는지
+  lv.forEach((x,i)=>{ let c=1; for (let j=i;j<lv.length-1;j++){ if(!lv[j].n){ c=0; break; } c*=lv[j].n; } x.cnt=c; });
+  return {u, lv};
+}
+function packText(p){ const {u,lv}=packCalc((p.info||{}).pack); if(!lv.length) return "";
+  return lv.map((x,i)=>x.name+(x.w?" "+fmtN(x.w)+u:"")+(i<lv.length-1&&x.n?" ("+fmtN(x.n)+"입)":"")).join(" › "); }
+function priceOf(p){ const pr=(p.info||{}).price||{}; const v=numOf(pr.v); if(!v) return null;
+  const {u,lv}=packCalc((p.info||{}).pack); const lvl=lv.find(x=>x.name===pr.per) || null;
+  const last=lv[lv.length-1];
+  let per1=null; if (lvl && last && lvl!==last && lvl.cnt) per1 = v/lvl.cnt;
+  let per100=null; if (lvl && lvl.w) per100 = v/lvl.w*100;
+  return {v, per:lvl?lvl.name:(pr.per||""), per1, unit1:last?last.name:"", per100, u}; }
+function priceText(p){ const r=priceOf(p); return r ? fmtN(r.v)+"원"+(r.per?"/"+r.per:"") : ""; }
+function specHtml(p){
+  const {u,lv}=packCalc((p.info||{}).pack), pr=priceOf(p);
+  if (!lv.length && !pr) return '<button type="button" class="pspec pspec-none" id="pspec" title="내용량·판매가 입력">'+(S.canWrite?'＋ 내용량 · 판매가 입력':'내용량 · 판매가 —')+'</button>';
+  const chain = lv.length ? lv.map((x,i)=>'<span class="pk'+(i===0?' outer':'')+'"><span class="pk-n">'+esc(x.name)+'</span>'+(x.w?'<b class="num'+(x.auto?' auto':'')+'"'+(x.auto?' title="입수 × 아래 단위 중량으로 자동 계산"':'')+'>'+fmtN(x.w)+'<small>'+u+'</small></b>':'<b class="num miss">?</b>')+'</span>'+
+      (i<lv.length-1?'<span class="pk-x" aria-label="'+(x.n?fmtN(x.n)+'입':'입수 미정')+'">'+(x.n?fmtN(x.n)+'입':'')+'</span>':'')).join("") : '<span class="pk-none">—</span>';
+  const price = pr ? '<span class="pr"><b class="num">'+fmtN(pr.v)+'<small>원</small></b>'+(pr.per?'<span class="pr-per">/ '+esc(pr.per)+'</span>':'')+
+      (pr.per1?'<span class="pr-sub">'+esc(pr.unit1)+'당 '+fmtN(Math.round(pr.per1))+'원</span>':'')+
+      (pr.per100?'<span class="pr-sub">100'+pr.u+'당 '+fmtN(Math.round(pr.per100))+'원</span>':'')+'</span>' : '<span class="pk-none">—</span>';
+  return '<button type="button" class="pspec" id="pspec" title="내용량·판매가 '+(S.canWrite?'수정':'보기')+'"><span class="sp-l">내용량</span><span class="pk-chain">'+chain+'</span>'+(S.canWrite?'<span class="pk-ed" aria-hidden="true">✎</span>':'')+'<span class="sp-l">판매가</span>'+price+'</button>';
+}
 function squareJpeg(file){ return new Promise((res,rej)=>{ const url=URL.createObjectURL(file), im=new Image();
   im.onload=()=>{ const N=160, c=document.createElement("canvas"); c.width=c.height=N; const g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,N,N);
     const k=Math.min(N/im.naturalWidth, N/im.naturalHeight), w=im.naturalWidth*k, h=im.naturalHeight*k; g.drawImage(im,(N-w)/2,(N-h)/2,w,h); URL.revokeObjectURL(url); res(c.toDataURL("image/jpeg",0.85)); };
@@ -1383,8 +1459,15 @@ async function setImage(p, src){
     S.imgs = {...S.imgs}; if (src) S.imgs[p.id]=src; else delete S.imgs[p.id]; render(); toast(src?"제품 이미지를 바꿨습니다.":"제품 이미지를 지웠습니다.");
   } catch(e){ toast("이미지를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요."); }
 }
-function openInfo(p){
+function openInfo(p, focus){
   const i=p.info||{}, ro=S.canWrite?"":"disabled";
+  const pk=i.pack||{}, pl=(pk.lv||[]).slice(0,3); while(pl.length<3) pl.push({});
+  const pdef=[["카톤박스","겉포장"],["케이스","중간 포장 (케이스·팩)"],["파우치","낱개 (파우치·포)"]];
+  const pr=i.price||{};
+  const packRows = pl.map((x,k)=>'<div class="pkrow"><span class="pk-lab">'+pdef[k][1]+'</span>'+
+      '<input class="pk-name" list="i-pkl" value="'+esc(x.name||"")+'" placeholder="'+pdef[k][0]+'" aria-label="'+pdef[k][1]+' 단위 이름" '+ro+'>'+
+      (k<2?'<input class="pk-cnt" inputmode="decimal" value="'+esc(x.n||"")+'" placeholder="입수" aria-label="'+pdef[k][1]+'에 든 아래 단위 개수" '+ro+'>':'<span class="pk-cnt-na">—</span>')+
+      '<input class="pk-w" inputmode="decimal" value="'+esc(x.w||"")+'" placeholder="중량" aria-label="'+pdef[k][1]+' 중량" '+ro+'></div>').join("");
   drawer('<h3>제품 정보</h3><div class="ctx">'+esc(p.name)+'</div>'+
     '<div class="field"><label>제품 이미지</label><div style="display:flex;align-items:center;gap:10px"><span class="thumb" style="width:64px;height:64px" id="i-prev">'+thumbInner(p)+'</span>'+
       (S.canWrite?'<label class="btn" style="cursor:pointer">이미지 선택<input type="file" id="i-file" accept="image/*" hidden></label>'+((S.imgs||{})[p.id]?'<button class="btn ghost danger" type="button" id="i-rm">지우기</button>':''):'')+'</div>'+
@@ -1393,16 +1476,45 @@ function openInfo(p){
     '<div class="field"><label for="i-ch">채널</label><input id="i-ch" list="i-chl" value="'+esc(i.channel||"")+'" placeholder="예: 자사몰, 홈쇼핑, H&B, 시판" '+ro+'><datalist id="i-chl">'+["자사몰","종합몰","홈쇼핑","H&B","시판","H-Geno."].map(v=>'<option value="'+v+'">').join("")+'</datalist></div>'+
     '<div class="row2"><div class="field"><label for="i-moq">MOQ</label><input id="i-moq" value="'+esc(i.moq||"")+'" placeholder="예: 3,000개" '+ro+'></div>'+
     '<div class="field"><label for="i-sales">매출액</label><input id="i-sales" value="'+esc(i.sales||"")+'" placeholder="예: 5.5억 (27년 예상)" '+ro+'></div></div>'+
+    '<div class="field" id="i-spec"><label>내용량 <span style="color:var(--muted);font-weight:400">· 큰 포장부터, 쓰지 않는 단계는 비워 두세요</span></label>'+
+      '<div class="pkgrid"><div class="pkhead"><span></span><span>단위</span><span>입수</span><span class="pk-uh">중량 <select id="i-pku" aria-label="중량 단위" '+ro+'><option value="g"'+(pk.u!=="mL"?" selected":"")+'>g</option><option value="mL"'+(pk.u==="mL"?" selected":"")+'>mL</option></select></span></div>'+packRows+'</div>'+
+      '<datalist id="i-pkl">'+PACK_NAMES.map(v=>'<option value="'+v+'">').join("")+'</datalist>'+
+      '<div class="note" style="background:none;padding:0">입수 = 그 안에 든 아래 단위 개수. 중량을 비우면 입수 × 아래 단위 중량으로 자동 계산합니다.</div></div>'+
+    '<div class="row2"><div class="field"><label for="i-price">판매가 (원)</label><input id="i-price" inputmode="numeric" value="'+esc(pr.v?fmtN(pr.v):"")+'" placeholder="예: 348,000" '+ro+'></div>'+
+      '<div class="field"><label for="i-per">가격 기준 단위</label><select id="i-per" '+ro+'></select></div></div>'+
+    '<div class="field"><label>미리보기 <span style="color:var(--muted);font-weight:400">· 일정표 상단에 이렇게 표시됩니다</span></label><div class="note pk-prev" id="i-pkprev"></div></div>'+
     '<div class="field"><label for="i-exp">예상 런칭 시기 <span style="color:var(--muted);font-weight:400">· 런칭일 미정일 때 순서 배치용</span></label><input type="month" id="i-exp" value="'+esc(p.expect||"")+'" '+ro+'></div>'+
     '<div class="dactions">'+(S.canWrite?'<button class="btn primary" id="i-save" type="button">저장</button>':'')+'<div class="spacer"></div><button class="btn ghost" data-close type="button">닫기</button></div>',
   d=>{
+    const readPack = ()=>({u:d.querySelector("#i-pku").value, lv:[...d.querySelectorAll(".pkrow")].map(r=>({name:r.querySelector(".pk-name").value.trim(), n:numOf(r.querySelector(".pk-cnt")?.value), w:numOf(r.querySelector(".pk-w").value)})).filter(x=>x.name||x.w).map(x=>{ const o={name:x.name}; if(x.n) o.n=x.n; if(x.w) o.w=x.w; return o; })});
+    const perSel = d.querySelector("#i-per");
+    const refresh = ()=>{
+      const pack = readPack(), {u,lv} = packCalc(pack);
+      const cur = perSel.value || pr.per || "";
+      const names = lv.map(x=>x.name);
+      perSel.innerHTML = '<option value="">단위 선택</option>'+names.map(n=>'<option'+(n===cur?" selected":"")+'>'+esc(n)+'</option>').join("")+(cur&&!names.includes(cur)?'<option selected>'+esc(cur)+'</option>':'');
+      if (!cur && names.length) perSel.value = names[0];
+      // 자동 계산 중량을 빈 칸 안내로 표시
+      const rows=[...d.querySelectorAll(".pkrow")], filled=rows.filter(r=>r.querySelector(".pk-name").value.trim()||numOf(r.querySelector(".pk-w").value));
+      filled.forEach((r,k)=>{ const x=lv[k]; const w=r.querySelector(".pk-w"); w.placeholder = x&&x.auto ? "자동 "+fmtN(x.w) : "중량"; });
+      const tmp = {info:{pack, price:{v:numOf(d.querySelector("#i-price").value), per:perSel.value}}};
+      const h = specHtml(tmp).replace(/^<button[^>]*>/,"").replace(/<\/button>$/,"").replace(/<span class="pk-ed"[^>]*>✎<\/span>/,"");
+      d.querySelector("#i-pkprev").innerHTML = '<span class="pspec in-note">'+h+'</span>';
+    };
+    d.querySelectorAll(".pkrow input, #i-pku, #i-price, #i-per").forEach(el=>el.addEventListener("input", refresh));
+    perSel.addEventListener("change", refresh);
+    d.querySelector("#i-price").addEventListener("blur", e=>{ const v=numOf(e.target.value); e.target.value = v?fmtN(v):""; });
+    refresh();
+    if (focus==="spec") { const sp=d.querySelector("#i-spec"); sp.scrollIntoView({block:"start"}); if(!COARSE) sp.querySelector(".pk-name")?.focus(); }
     d.querySelector("#i-file")?.addEventListener("change", async e=>{ const f=e.target.files[0]; if(!f) return;
       try { const src=await squareJpeg(f); d.querySelector("#i-prev").innerHTML='<img src="'+src+'" alt="">'; await setImage(p, src); } catch(err){ toast("이미지 파일을 읽지 못했습니다."); } });
     d.querySelector("#i-rm")?.addEventListener("click", async ()=>{ await setImage(p, null); d.querySelector("#i-prev").innerHTML=thumbInner(p); d.querySelector("#i-rm").remove(); });
     d.querySelector("#i-save")?.addEventListener("click", ()=>{
       const v={cat:d.querySelector("#i-cat").value, channel:d.querySelector("#i-ch").value.trim(), moq:d.querySelector("#i-moq").value.trim(), sales:d.querySelector("#i-sales").value.trim()};
+      const pack=readPack(); if (pack.lv.length) v.pack=pack;
+      const pv=numOf(d.querySelector("#i-price").value); if (pv) v.price={v:pv, per:perSel.value||""};
       const ex=d.querySelector("#i-exp").value||"";
-      const old=p.info||{}; if (["cat","channel","moq","sales"].every(k=>(old[k]||"")===v[k]) && ex===(p.expect||"")) { closeDrawer(); return; }
+      const old=p.info||{}; if (["cat","channel","moq","sales"].every(k=>(old[k]||"")===v[k]) && JSON.stringify(old.pack||null)===JSON.stringify(v.pack||null) && JSON.stringify(old.price||null)===JSON.stringify(v.price||null) && ex===(p.expect||"")) { closeDrawer(); return; }
       closeDrawer(); commit(p.id, ()=>{ p.info=v; if(ex) p.expect=ex; else delete p.expect; }, "제품 정보를 저장했습니다.");
     });
   });
