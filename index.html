@@ -204,7 +204,7 @@ button.thumb:hover{border-color:var(--accent)}
 .pspec{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:10px;row-gap:3px;min-height:26px;padding:4px 10px;border:1px dashed var(--line-strong);border-radius:7px;background:var(--sunk);color:var(--muted);font:inherit;font-size:12px;text-align:left;cursor:pointer;flex-wrap:wrap;row-gap:2px}
 .pspec:hover{border-color:var(--accent);border-style:solid}
 .pspec.pspec-none{display:flex;color:var(--faint);justify-content:center}
-.sp-l{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.02em}
+.sp-l{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.02em;align-self:start;line-height:20px}
 .pspec .pr{grid-column:2}
 .pspec.pspec-none:hover{color:var(--accent)}
 .pspec .sep{color:var(--line-strong)}
@@ -221,14 +221,15 @@ button.thumb:hover{border-color:var(--accent)}
 .pk-x::after{content:"›";font-size:14px;line-height:1;color:var(--line-strong);margin-left:3px}
 .pk-x:empty::after{display:none}
 .pk-none{color:var(--faint)}
-.pr{display:inline-flex;align-items:baseline;gap:5px;flex-wrap:wrap}
-.pr-per{font-size:11px;color:var(--muted);margin-left:-1px}
+.pr{display:inline-flex;align-items:baseline;gap:3px 5px;flex-wrap:wrap;line-height:20px}
+.pr-per{font-size:11px;color:var(--muted);margin-right:1px}
 .pr-k{font-size:10.5px;color:var(--muted);padding:0 5px;border-radius:4px;background:var(--surface);border:1px solid var(--line);line-height:15px}
 .pr-k.sale{color:#b3261e;border-color:color-mix(in srgb,#d93025 35%,var(--line));background:color-mix(in srgb,#d93025 7%,var(--surface))}
 .pr b.pr-was{color:var(--muted);font-weight:600}
 .pr b.pr-sale{color:#b3261e}
 .pr-off{font-size:10.5px;font-weight:700;color:#b3261e;margin-left:-2px}
 .pr-s{color:#b3261e;font-weight:600}
+.pr-ev{font-size:10.5px;color:#b3261e;opacity:.8;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-left:-1px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1.1fr;gap:10px}
 .row3 > *{min-width:0}
 .pr-sub{font-size:11px;color:var(--muted);padding-left:7px;border-left:1px solid var(--line)}
@@ -1447,10 +1448,10 @@ function priceOf(p){ const pr=(p.info||{}).price||{}; const v=numOf(pr.v), sv=nu
   const one = x => (x && lvl && last && lvl!==last && lvl.cnt) ? x/lvl.cnt : null;
   const hund = x => (x && lvl && lvl.w) ? x/lvl.w*100 : null;
   const off = (v && sv && sv<v) ? Math.round((1-sv/v)*100) : 0;
-  return {v, s:sv, off, per:lvl?lvl.name:(pr.per||""), unit1:last?last.name:"", u,
+  return {v, s:sv, off, ev:sv?String(pr.ev||"").trim():"", per:lvl?lvl.name:(pr.per||""), unit1:last?last.name:"", u,
     v1:one(v), s1:one(sv), v100:hund(v), s100:hund(sv)}; }
 function priceText(p){ const r=priceOf(p); if(!r) return "";
-  return [r.v?"정상가 "+fmtN(r.v)+"원":"", r.s?"행사가 "+fmtN(r.s)+"원":""].filter(Boolean).join(" · ")+(r.per?"/"+r.per:""); }
+  return [r.v?"정상가 "+fmtN(r.v)+"원":"", r.s?"행사가 "+fmtN(r.s)+"원"+(r.ev?"("+r.ev+")":""):""].filter(Boolean).join(" · ")+(r.per?"/"+r.per:""); }
 function unitPair(a, b){ // 정상 · 행사 단가를 한 칸에
   const f=x=>fmtN(Math.round(x));
   if (a && b) return f(a)+' <span class="pr-s">→ '+f(b)+'</span>원';
@@ -1460,10 +1461,9 @@ function specHtml(p){
   if (!lv.length && !pr) return '<button type="button" class="pspec pspec-none" id="pspec" title="내용량·판매가 입력">'+(S.canWrite?'＋ 내용량 · 판매가 입력':'내용량 · 판매가 —')+'</button>';
   const chain = lv.length ? lv.map((x,i)=>'<span class="pk'+(i===0?' outer':'')+'"><span class="pk-n">'+esc(x.name)+'</span>'+(x.w?'<b class="num'+(x.auto?' auto':'')+'"'+(x.auto?' title="입수 × 아래 단위 중량으로 자동 계산"':'')+'>'+fmtN(x.w)+'<small>'+u+'</small></b>':'<b class="num miss">?</b>')+'</span>'+
       (i<lv.length-1?'<span class="pk-x" aria-label="'+(x.n?fmtN(x.n)+'입':'입수 미정')+'">'+(x.n?fmtN(x.n)+'입':'')+'</span>':'')).join("") : '<span class="pk-none">—</span>';
-  const price = pr ? '<span class="pr">'+
+  const price = pr ? '<span class="pr">'+(pr.per?'<span class="pr-per">'+esc(pr.per)+' 기준</span>':'')+
       (pr.v?'<span class="pr-k">정상가</span><b class="num'+(pr.s?' pr-was':'')+'">'+fmtN(pr.v)+'<small>원</small></b>':'')+
-      (pr.s?'<span class="pr-k sale">행사가</span><b class="num pr-sale">'+fmtN(pr.s)+'<small>원</small></b>'+(pr.off?'<span class="pr-off">'+pr.off+'%↓</span>':''):'')+
-      (pr.per?'<span class="pr-per">/ '+esc(pr.per)+'</span>':'')+
+      (pr.s?'<span class="pr-k sale">행사가</span><b class="num pr-sale">'+fmtN(pr.s)+'<small>원</small></b>'+(pr.off?'<span class="pr-off">'+pr.off+'%↓</span>':'')+(pr.ev?'<span class="pr-ev" title="'+esc(pr.ev)+'">'+esc(pr.ev)+'</span>':''):'')+
       ((pr.v1||pr.s1)?'<span class="pr-sub">'+esc(pr.unit1)+'당 '+unitPair(pr.v1,pr.s1)+'</span>':'')+
       (!(pr.v&&pr.s)&&(pr.v100||pr.s100)?'<span class="pr-sub">100'+pr.u+'당 '+unitPair(pr.v100,pr.s100)+'</span>':'')+'</span>' : '<span class="pk-none">—</span>';
   const tip = pr&&(pr.v100||pr.s100) ? ' · 100'+pr.u+'당 '+[pr.v100?"정상 "+fmtN(Math.round(pr.v100))+"원":"", pr.s100?"행사 "+fmtN(Math.round(pr.s100))+"원":""].filter(Boolean).join(" / ") : "";
@@ -1503,6 +1503,7 @@ function openInfo(p, focus){
     '<div class="row3"><div class="field"><label for="i-price">정상가 (원)</label><input id="i-price" inputmode="numeric" value="'+esc(pr.v?fmtN(pr.v):"")+'" placeholder="예: 19,990" '+ro+'></div>'+
       '<div class="field"><label for="i-sale">행사가 (원)</label><input id="i-sale" inputmode="numeric" value="'+esc(pr.s?fmtN(pr.s):"")+'" placeholder="없으면 비움" '+ro+'></div>'+
       '<div class="field"><label for="i-per">가격 기준 단위</label><select id="i-per" '+ro+'></select></div></div>'+
+    '<div class="field"><label for="i-ev">행사명 <span style="color:var(--muted);font-weight:400">· 행사가 옆에 작게 표시 (선택)</span></label><input id="i-ev" value="'+esc(pr.ev||"")+'" placeholder="예: MBM행사 12/21~1/17" maxlength="40" '+ro+'></div>'+
     '<div class="field"><label>미리보기 <span style="color:var(--muted);font-weight:400">· 일정표 상단에 이렇게 표시됩니다</span></label><div class="note pk-prev" id="i-pkprev"></div></div>'+
     '<div class="field"><label for="i-exp">예상 런칭 시기 <span style="color:var(--muted);font-weight:400">· 런칭일 미정일 때 순서 배치용</span></label><input type="month" id="i-exp" value="'+esc(p.expect||"")+'" '+ro+'></div>'+
     '<div class="dactions">'+(S.canWrite?'<button class="btn primary" id="i-save" type="button">저장</button>':'')+'<div class="spacer"></div><button class="btn ghost" data-close type="button">닫기</button></div>',
@@ -1519,11 +1520,11 @@ function openInfo(p, focus){
       // 자동 계산 중량을 빈 칸 안내로 표시
       const rows=[...d.querySelectorAll(".pkrow")], filled=rows.filter(r=>r.querySelector(".pk-name").value.trim()||numOf(r.querySelector(".pk-w").value));
       filled.forEach((r,k)=>{ const x=lv[k]; const w=r.querySelector(".pk-w"); w.placeholder = x&&x.auto ? "자동 "+fmtN(x.w) : "중량"; });
-      const tmp = {info:{pack, price:{v:numOf(d.querySelector("#i-price").value), s:numOf(d.querySelector("#i-sale").value), per:perSel.value}}};
+      const tmp = {info:{pack, price:{v:numOf(d.querySelector("#i-price").value), s:numOf(d.querySelector("#i-sale").value), ev:d.querySelector("#i-ev").value, per:perSel.value}}};
       const h = specHtml(tmp).replace(/^<button[^>]*>/,"").replace(/<\/button>$/,"").replace(/<span class="pk-ed"[^>]*>✎<\/span>/,"");
       d.querySelector("#i-pkprev").innerHTML = '<span class="pspec in-note">'+h+'</span>';
     };
-    d.querySelectorAll(".pkrow input, #i-pku, #i-price, #i-sale").forEach(el=>el.addEventListener("input", refresh));
+    d.querySelectorAll(".pkrow input, #i-pku, #i-price, #i-sale, #i-ev").forEach(el=>el.addEventListener("input", refresh));
     perSel.addEventListener("change", ()=>setTimeout(refresh));
     d.querySelectorAll("#i-price, #i-sale").forEach(el=>el.addEventListener("blur", e=>{ const v=numOf(e.target.value); e.target.value = v?fmtN(v):""; }));
     refresh();
@@ -1535,7 +1536,7 @@ function openInfo(p, focus){
       const v={cat:d.querySelector("#i-cat").value, channel:d.querySelector("#i-ch").value.trim(), moq:d.querySelector("#i-moq").value.trim(), sales:d.querySelector("#i-sales").value.trim()};
       const pack=readPack(); if (pack.lv.length) v.pack=pack;
       const pv=numOf(d.querySelector("#i-price").value), ps=numOf(d.querySelector("#i-sale").value);
-      if (pv||ps) { v.price={per:perSel.value||""}; if(pv) v.price.v=pv; if(ps) v.price.s=ps; }
+      if (pv||ps) { v.price={per:perSel.value||""}; if(pv) v.price.v=pv; if(ps) v.price.s=ps; const ev=d.querySelector("#i-ev").value.trim(); if(ps&&ev) v.price.ev=ev; }
       const ex=d.querySelector("#i-exp").value||"";
       const old=p.info||{}; if (["cat","channel","moq","sales"].every(k=>(old[k]||"")===v[k]) && JSON.stringify(old.pack||null)===JSON.stringify(v.pack||null) && JSON.stringify(old.price||null)===JSON.stringify(v.price||null) && ex===(p.expect||"")) { closeDrawer(); return; }
       closeDrawer(); commit(p.id, ()=>{ p.info=v; if(ex) p.expect=ex; else delete p.expect; }, "제품 정보를 저장했습니다.");
