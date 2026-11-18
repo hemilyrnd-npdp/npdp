@@ -222,7 +222,15 @@ button.thumb:hover{border-color:var(--accent)}
 .pk-x:empty::after{display:none}
 .pk-none{color:var(--faint)}
 .pr{display:inline-flex;align-items:baseline;gap:5px;flex-wrap:wrap}
-.pr-per{font-size:11px;color:var(--muted);margin-left:-3px}
+.pr-per{font-size:11px;color:var(--muted);margin-left:-1px}
+.pr-k{font-size:10.5px;color:var(--muted);padding:0 5px;border-radius:4px;background:var(--surface);border:1px solid var(--line);line-height:15px}
+.pr-k.sale{color:#b3261e;border-color:color-mix(in srgb,#d93025 35%,var(--line));background:color-mix(in srgb,#d93025 7%,var(--surface))}
+.pr b.pr-was{color:var(--muted);font-weight:600}
+.pr b.pr-sale{color:#b3261e}
+.pr-off{font-size:10.5px;font-weight:700;color:#b3261e;margin-left:-2px}
+.pr-s{color:#b3261e;font-weight:600}
+.row3{display:grid;grid-template-columns:1fr 1fr 1.1fr;gap:10px}
+.row3 > *{min-width:0}
 .pr-sub{font-size:11px;color:var(--muted);padding-left:7px;border-left:1px solid var(--line)}
 .pk-ed{grid-row:1 / span 2;grid-column:3;color:var(--muted);align-self:center}
 .pspec.in-note{border:0;background:none;padding:0;cursor:default;min-height:0;display:grid;grid-template-columns:auto minmax(0,1fr)}
@@ -1432,22 +1440,34 @@ function packCalc(pk){
 }
 function packText(p){ const {u,lv}=packCalc((p.info||{}).pack); if(!lv.length) return "";
   return lv.map((x,i)=>x.name+(x.w?" "+fmtN(x.w)+u:"")+(i<lv.length-1&&x.n?" ("+fmtN(x.n)+"입)":"")).join(" › "); }
-function priceOf(p){ const pr=(p.info||{}).price||{}; const v=numOf(pr.v); if(!v) return null;
+/* price = {v: 정상가, s: 행사가, per: 기준 단위 이름} */
+function priceOf(p){ const pr=(p.info||{}).price||{}; const v=numOf(pr.v), sv=numOf(pr.s); if(!v && !sv) return null;
   const {u,lv}=packCalc((p.info||{}).pack); const lvl=lv.find(x=>x.name===pr.per) || null;
   const last=lv[lv.length-1];
-  let per1=null; if (lvl && last && lvl!==last && lvl.cnt) per1 = v/lvl.cnt;
-  let per100=null; if (lvl && lvl.w) per100 = v/lvl.w*100;
-  return {v, per:lvl?lvl.name:(pr.per||""), per1, unit1:last?last.name:"", per100, u}; }
-function priceText(p){ const r=priceOf(p); return r ? fmtN(r.v)+"원"+(r.per?"/"+r.per:"") : ""; }
+  const one = x => (x && lvl && last && lvl!==last && lvl.cnt) ? x/lvl.cnt : null;
+  const hund = x => (x && lvl && lvl.w) ? x/lvl.w*100 : null;
+  const off = (v && sv && sv<v) ? Math.round((1-sv/v)*100) : 0;
+  return {v, s:sv, off, per:lvl?lvl.name:(pr.per||""), unit1:last?last.name:"", u,
+    v1:one(v), s1:one(sv), v100:hund(v), s100:hund(sv)}; }
+function priceText(p){ const r=priceOf(p); if(!r) return "";
+  return [r.v?"정상가 "+fmtN(r.v)+"원":"", r.s?"행사가 "+fmtN(r.s)+"원":""].filter(Boolean).join(" · ")+(r.per?"/"+r.per:""); }
+function unitPair(a, b){ // 정상 · 행사 단가를 한 칸에
+  const f=x=>fmtN(Math.round(x));
+  if (a && b) return f(a)+' <span class="pr-s">→ '+f(b)+'</span>원';
+  return f(a||b)+'원'; }
 function specHtml(p){
   const {u,lv}=packCalc((p.info||{}).pack), pr=priceOf(p);
   if (!lv.length && !pr) return '<button type="button" class="pspec pspec-none" id="pspec" title="내용량·판매가 입력">'+(S.canWrite?'＋ 내용량 · 판매가 입력':'내용량 · 판매가 —')+'</button>';
   const chain = lv.length ? lv.map((x,i)=>'<span class="pk'+(i===0?' outer':'')+'"><span class="pk-n">'+esc(x.name)+'</span>'+(x.w?'<b class="num'+(x.auto?' auto':'')+'"'+(x.auto?' title="입수 × 아래 단위 중량으로 자동 계산"':'')+'>'+fmtN(x.w)+'<small>'+u+'</small></b>':'<b class="num miss">?</b>')+'</span>'+
       (i<lv.length-1?'<span class="pk-x" aria-label="'+(x.n?fmtN(x.n)+'입':'입수 미정')+'">'+(x.n?fmtN(x.n)+'입':'')+'</span>':'')).join("") : '<span class="pk-none">—</span>';
-  const price = pr ? '<span class="pr"><b class="num">'+fmtN(pr.v)+'<small>원</small></b>'+(pr.per?'<span class="pr-per">/ '+esc(pr.per)+'</span>':'')+
-      (pr.per1?'<span class="pr-sub">'+esc(pr.unit1)+'당 '+fmtN(Math.round(pr.per1))+'원</span>':'')+
-      (pr.per100?'<span class="pr-sub">100'+pr.u+'당 '+fmtN(Math.round(pr.per100))+'원</span>':'')+'</span>' : '<span class="pk-none">—</span>';
-  return '<button type="button" class="pspec" id="pspec" title="내용량·판매가 '+(S.canWrite?'수정':'보기')+'"><span class="sp-l">내용량</span><span class="pk-chain">'+chain+'</span>'+(S.canWrite?'<span class="pk-ed" aria-hidden="true">✎</span>':'')+'<span class="sp-l">판매가</span>'+price+'</button>';
+  const price = pr ? '<span class="pr">'+
+      (pr.v?'<span class="pr-k">정상가</span><b class="num'+(pr.s?' pr-was':'')+'">'+fmtN(pr.v)+'<small>원</small></b>':'')+
+      (pr.s?'<span class="pr-k sale">행사가</span><b class="num pr-sale">'+fmtN(pr.s)+'<small>원</small></b>'+(pr.off?'<span class="pr-off">'+pr.off+'%↓</span>':''):'')+
+      (pr.per?'<span class="pr-per">/ '+esc(pr.per)+'</span>':'')+
+      ((pr.v1||pr.s1)?'<span class="pr-sub">'+esc(pr.unit1)+'당 '+unitPair(pr.v1,pr.s1)+'</span>':'')+
+      (!(pr.v&&pr.s)&&(pr.v100||pr.s100)?'<span class="pr-sub">100'+pr.u+'당 '+unitPair(pr.v100,pr.s100)+'</span>':'')+'</span>' : '<span class="pk-none">—</span>';
+  const tip = pr&&(pr.v100||pr.s100) ? ' · 100'+pr.u+'당 '+[pr.v100?"정상 "+fmtN(Math.round(pr.v100))+"원":"", pr.s100?"행사 "+fmtN(Math.round(pr.s100))+"원":""].filter(Boolean).join(" / ") : "";
+  return '<button type="button" class="pspec" id="pspec" title="내용량·판매가 '+(S.canWrite?'수정':'보기')+esc(tip)+'"><span class="sp-l">내용량</span><span class="pk-chain">'+chain+'</span>'+(S.canWrite?'<span class="pk-ed" aria-hidden="true">✎</span>':'')+'<span class="sp-l">판매가</span>'+price+'</button>';
 }
 function squareJpeg(file){ return new Promise((res,rej)=>{ const url=URL.createObjectURL(file), im=new Image();
   im.onload=()=>{ const N=160, c=document.createElement("canvas"); c.width=c.height=N; const g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,N,N);
@@ -1480,7 +1500,8 @@ function openInfo(p, focus){
       '<div class="pkgrid"><div class="pkhead"><span></span><span>단위</span><span>입수</span><span class="pk-uh">중량 <select id="i-pku" aria-label="중량 단위" '+ro+'><option value="g"'+(pk.u!=="mL"?" selected":"")+'>g</option><option value="mL"'+(pk.u==="mL"?" selected":"")+'>mL</option></select></span></div>'+packRows+'</div>'+
       '<datalist id="i-pkl">'+PACK_NAMES.map(v=>'<option value="'+v+'">').join("")+'</datalist>'+
       '<div class="note" style="background:none;padding:0">입수 = 그 안에 든 아래 단위 개수. 중량을 비우면 입수 × 아래 단위 중량으로 자동 계산합니다.</div></div>'+
-    '<div class="row2"><div class="field"><label for="i-price">판매가 (원)</label><input id="i-price" inputmode="numeric" value="'+esc(pr.v?fmtN(pr.v):"")+'" placeholder="예: 348,000" '+ro+'></div>'+
+    '<div class="row3"><div class="field"><label for="i-price">정상가 (원)</label><input id="i-price" inputmode="numeric" value="'+esc(pr.v?fmtN(pr.v):"")+'" placeholder="예: 19,990" '+ro+'></div>'+
+      '<div class="field"><label for="i-sale">행사가 (원)</label><input id="i-sale" inputmode="numeric" value="'+esc(pr.s?fmtN(pr.s):"")+'" placeholder="없으면 비움" '+ro+'></div>'+
       '<div class="field"><label for="i-per">가격 기준 단위</label><select id="i-per" '+ro+'></select></div></div>'+
     '<div class="field"><label>미리보기 <span style="color:var(--muted);font-weight:400">· 일정표 상단에 이렇게 표시됩니다</span></label><div class="note pk-prev" id="i-pkprev"></div></div>'+
     '<div class="field"><label for="i-exp">예상 런칭 시기 <span style="color:var(--muted);font-weight:400">· 런칭일 미정일 때 순서 배치용</span></label><input type="month" id="i-exp" value="'+esc(p.expect||"")+'" '+ro+'></div>'+
@@ -1498,13 +1519,13 @@ function openInfo(p, focus){
       // 자동 계산 중량을 빈 칸 안내로 표시
       const rows=[...d.querySelectorAll(".pkrow")], filled=rows.filter(r=>r.querySelector(".pk-name").value.trim()||numOf(r.querySelector(".pk-w").value));
       filled.forEach((r,k)=>{ const x=lv[k]; const w=r.querySelector(".pk-w"); w.placeholder = x&&x.auto ? "자동 "+fmtN(x.w) : "중량"; });
-      const tmp = {info:{pack, price:{v:numOf(d.querySelector("#i-price").value), per:perSel.value}}};
+      const tmp = {info:{pack, price:{v:numOf(d.querySelector("#i-price").value), s:numOf(d.querySelector("#i-sale").value), per:perSel.value}}};
       const h = specHtml(tmp).replace(/^<button[^>]*>/,"").replace(/<\/button>$/,"").replace(/<span class="pk-ed"[^>]*>✎<\/span>/,"");
       d.querySelector("#i-pkprev").innerHTML = '<span class="pspec in-note">'+h+'</span>';
     };
-    d.querySelectorAll(".pkrow input, #i-pku, #i-price").forEach(el=>el.addEventListener("input", refresh));
+    d.querySelectorAll(".pkrow input, #i-pku, #i-price, #i-sale").forEach(el=>el.addEventListener("input", refresh));
     perSel.addEventListener("change", ()=>setTimeout(refresh));
-    d.querySelector("#i-price").addEventListener("blur", e=>{ const v=numOf(e.target.value); e.target.value = v?fmtN(v):""; });
+    d.querySelectorAll("#i-price, #i-sale").forEach(el=>el.addEventListener("blur", e=>{ const v=numOf(e.target.value); e.target.value = v?fmtN(v):""; }));
     refresh();
     if (focus==="spec") { const sp=d.querySelector("#i-spec"); sp.scrollIntoView({block:"start"}); if(!COARSE) sp.querySelector(".pk-name")?.focus(); }
     d.querySelector("#i-file")?.addEventListener("change", async e=>{ const f=e.target.files[0]; if(!f) return;
@@ -1513,7 +1534,8 @@ function openInfo(p, focus){
     d.querySelector("#i-save")?.addEventListener("click", ()=>{
       const v={cat:d.querySelector("#i-cat").value, channel:d.querySelector("#i-ch").value.trim(), moq:d.querySelector("#i-moq").value.trim(), sales:d.querySelector("#i-sales").value.trim()};
       const pack=readPack(); if (pack.lv.length) v.pack=pack;
-      const pv=numOf(d.querySelector("#i-price").value); if (pv) v.price={v:pv, per:perSel.value||""};
+      const pv=numOf(d.querySelector("#i-price").value), ps=numOf(d.querySelector("#i-sale").value);
+      if (pv||ps) { v.price={per:perSel.value||""}; if(pv) v.price.v=pv; if(ps) v.price.s=ps; }
       const ex=d.querySelector("#i-exp").value||"";
       const old=p.info||{}; if (["cat","channel","moq","sales"].every(k=>(old[k]||"")===v[k]) && JSON.stringify(old.pack||null)===JSON.stringify(v.pack||null) && JSON.stringify(old.price||null)===JSON.stringify(v.price||null) && ex===(p.expect||"")) { closeDrawer(); return; }
       closeDrawer(); commit(p.id, ()=>{ p.info=v; if(ex) p.expect=ex; else delete p.expect; }, "제품 정보를 저장했습니다.");
