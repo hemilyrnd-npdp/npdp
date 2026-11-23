@@ -199,6 +199,34 @@ button.thumb:hover{border-color:var(--accent)}
 .vis-btn[aria-pressed="true"]{background:#ffe45c;color:#b3261e;border-color:#d93025;font-weight:700}
 .vis-btn[aria-pressed="true"]:hover{background:#ffd93d;border-color:#b3261e}
 .pinfo-btn{font-size:12.5px}
+/* date picker */
+.dp-in{cursor:pointer;font-variant-numeric:tabular-nums}
+.dp{position:fixed;z-index:70;width:264px;box-sizing:border-box;background:var(--surface);border:1px solid var(--line-strong);border-radius:10px;box-shadow:var(--shadow);padding:10px 10px 8px;display:flex;flex-direction:column;gap:6px;font-size:13px;user-select:none}
+.dp-h{display:flex;align-items:center;justify-content:space-between}
+.dp-h b{font-size:14px}
+.dp-nav{width:30px;height:28px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--fg);font-size:17px;line-height:1;cursor:pointer}
+.dp-nav:hover{border-color:var(--accent);color:var(--accent)}
+.dp-w,.dp-g{display:grid;grid-template-columns:repeat(7,1fr);text-align:center}
+.dp-w span{font-size:11.5px;color:var(--muted);padding:2px 0}
+.dp-g{gap:2px}
+.dp-d{height:32px;border:0;border-radius:7px;background:none;color:var(--fg);font:inherit;font-variant-numeric:tabular-nums;cursor:pointer;position:relative}
+.dp-d:hover{background:var(--sunk)}
+.dp .red{color:#d93025}
+.dp .blue{color:#1a5fd0}
+.dp-d.co{background:color-mix(in srgb,#d93025 9%,transparent)}
+.dp-d.out{opacity:.38}
+.dp-d.today{box-shadow:inset 0 0 0 1.5px var(--accent);font-weight:700}
+.dp-d.sel{background:var(--accent);color:var(--accent-fg)!important;font-weight:700}
+.dp-hol{font-size:11px;color:#d93025;line-height:1.4;word-break:keep-all}
+.dp-f{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:6px}
+.dp-lg{display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--muted)}
+.dp-lg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-left:4px}
+.dp-lg i:first-child{margin-left:0}
+.dp-lg i.red{background:#d93025}.dp-lg i.blue{background:#1a5fd0}.dp-lg i.co{background:color-mix(in srgb,#d93025 22%,var(--surface));border:1px solid color-mix(in srgb,#d93025 35%,var(--surface))}
+.dp-today{border:1px solid var(--line-strong);border-radius:6px;background:var(--surface);color:var(--fg);font:inherit;font-size:12px;height:24px;padding:0 10px;cursor:pointer}
+.dp-today:hover{border-color:var(--accent);color:var(--accent)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .dp .red{color:#ff7a6b}:root:not([data-theme="light"]) .dp .blue{color:#7aa7ff}}
+:root[data-theme="dark"] .dp .red{color:#ff7a6b}:root[data-theme="dark"] .dp .blue{color:#7aa7ff}
 .pinfo-col{display:inline-flex;flex-direction:column;align-items:stretch;gap:4px;min-width:0}
 .pinfo-col > .pspec{width:0;min-width:100%;box-sizing:border-box}
 .pspec{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:10px;row-gap:3px;min-height:26px;padding:4px 10px;border:1px dashed var(--line-strong);border-radius:7px;background:var(--sunk);color:var(--muted);font:inherit;font-size:12px;text-align:left;cursor:pointer;flex-wrap:wrap;row-gap:2px}
@@ -757,6 +785,18 @@ window.npdpImportRaw = async function(id, file, type){
 "use strict";
 const TEMPLATE = [{"main":"아이디어 및 컨셉 개발","sub":"조사","proc":"시장조사"},{"main":"아이디어 및 컨셉 개발","sub":"기획","proc":"상품화 계획"},{"main":"아이디어 및 컨셉 개발","sub":"기획","proc":"개발 의뢰"},{"main":"스펙 확정","sub":"스펙 확정","proc":"원료 확정"},{"main":"스펙 확정","sub":"스펙 확정","proc":"제조사 확정"},{"main":"스펙 확정","sub":"스펙 확정","proc":"스펙 확정"},{"main":"스펙 확정","sub":"스펙 확정","proc":"시생산 진행 여부 체크"},{"main":"스펙 확정","sub":"스펙 확정","proc":"영양성분분석"},{"main":"스펙 확정","sub":"스펙 확정","proc":"품목제조보고/신고"},{"main":"스펙 확정","sub":"상품명 검토","proc":"상품명 및 가능여부 검토"},{"main":"스펙 확정","sub":"상품명 검토","proc":"상품명 확정"},{"main":"스펙 확정","sub":"상품화보고서","proc":"상품화보고서 작성"},{"main":"디자인, 표기 확정","sub":"부자재 검토","proc":"포장형태/구성단위 결정"},{"main":"디자인, 표기 확정","sub":"부자재 검토","proc":"부자재 견적, 단가 확정"},{"main":"디자인, 표기 확정","sub":"부자재 검토","proc":"부자재 내역서 작성, 공유"},{"main":"디자인, 표기 확정","sub":"디자인","proc":"패키지 디자인 의뢰"},{"main":"디자인, 표기 확정","sub":"디자인","proc":"최종 시안 확정"},{"main":"디자인, 표기 확정","sub":"디자인","proc":"원재료 사진촬영"},{"main":"디자인, 표기 확정","sub":"디자인","proc":"표기사항 검수"},{"main":"디자인, 표기 확정","sub":"디자인","proc":"인쇄 데이터 완료"},{"main":"발주 및 생산 준비","sub":"초도발주 요청","proc":"제품 코드 등록 요청"},{"main":"발주 및 생산 준비","sub":"초도발주 요청","proc":"초도물량 구매/생산 요청 등록"},{"main":"발주 및 생산 준비","sub":"부자재 생산","proc":"파우치 제작"},{"main":"발주 및 생산 준비","sub":"부자재 생산","proc":"케이스 제작"},{"main":"발주 및 생산 준비","sub":"부자재 생산","proc":"카톤 제작"},{"main":"발주 및 생산 준비","sub":"부자재 생산","proc":"섭취안내서 제작"},{"main":"생산 및 QC","sub":"생산","proc":"부자재 입고"},{"main":"생산 및 QC","sub":"생산","proc":"원료 QC"},{"main":"생산 및 QC","sub":"생산","proc":"완제품 생산 및 QC 진행"},{"main":"생산 및 QC","sub":"QC서류","proc":"완제품 공인검사성적서"},{"main":"생산 및 QC","sub":"QC서류","proc":"QC서류 준비"},{"main":"생산 및 QC","sub":"물류작업","proc":"완제품출고"},{"main":"마케팅 콘텐츠","sub":"홍보자료","proc":"완제품 사진촬영"},{"main":"마케팅 콘텐츠","sub":"홍보자료","proc":"웹기술서 제작"},{"main":"마케팅 콘텐츠","sub":"런칭 프로모션","proc":"런칭예정일"}];
 const HOLIDAYS = new Set(["2026-01-01","2026-02-16","2026-02-17","2026-02-18","2026-03-01","2026-03-02","2026-05-01","2026-05-05","2026-05-08","2026-05-24","2026-05-25","2026-06-03","2026-07-17","2026-08-15","2026-08-17","2026-09-24","2026-09-25","2026-09-26","2026-10-01","2026-10-03","2026-10-05","2026-10-09","2026-12-24","2026-12-25","2026-12-31","2027-01-01","2027-02-08","2027-02-09","2027-03-01","2027-05-03","2027-05-05","2027-05-13","2027-07-19","2027-08-16","2027-09-14","2027-09-15","2027-09-16","2027-10-01","2027-10-04","2027-10-11","2027-12-27","2027-12-31"]);
+/* 법정 공휴일(빨간날) — 관공서의 공휴일에 관한 규정 · 우주항공청 월력요항(2026·2027) 기준, 대체공휴일·선거일 포함.
+   HOLIDAYS(NPDP 시트 휴무 목록)에만 있는 날은 회사 휴무로 따로 표시 */
+const LEGAL_HOL = {
+  "2026-01-01":"신정","2026-02-16":"설날 연휴","2026-02-17":"설날","2026-02-18":"설날 연휴","2026-03-01":"삼일절","2026-03-02":"대체공휴일(삼일절)",
+  "2026-05-01":"노동절","2026-05-05":"어린이날","2026-05-24":"부처님오신날","2026-05-25":"대체공휴일(부처님오신날)","2026-06-03":"전국동시지방선거",
+  "2026-06-06":"현충일","2026-07-17":"제헌절","2026-08-15":"광복절","2026-08-17":"대체공휴일(광복절)","2026-09-24":"추석 연휴","2026-09-25":"추석",
+  "2026-09-26":"추석 연휴","2026-10-03":"개천절","2026-10-05":"대체공휴일(개천절)","2026-10-09":"한글날","2026-12-25":"성탄절",
+  "2027-01-01":"신정","2027-02-06":"설날 연휴","2027-02-07":"설날","2027-02-08":"설날 연휴","2027-02-09":"대체공휴일(설날)","2027-03-01":"삼일절",
+  "2027-05-01":"노동절","2027-05-03":"대체공휴일(노동절)","2027-05-05":"어린이날","2027-05-13":"부처님오신날","2027-06-06":"현충일","2027-07-17":"제헌절",
+  "2027-07-19":"대체공휴일(제헌절)","2027-08-15":"광복절","2027-08-16":"대체공휴일(광복절)","2027-09-14":"추석 연휴","2027-09-15":"추석","2027-09-16":"추석 연휴",
+  "2027-10-03":"개천절","2027-10-04":"대체공휴일(개천절)","2027-10-09":"한글날","2027-10-11":"대체공휴일(한글날)","2027-12-25":"성탄절","2027-12-27":"대체공휴일(성탄절)"
+};
 const WD = ["일","월","화","수","목","금","토"];
 
 /* ---------- date helpers (day numbers, UTC-safe) ---------- */
@@ -1584,15 +1624,77 @@ function openInfo(p, focus){
     });
   });
 }
+/* ---------- 날짜 선택 달력 (공휴일 빨강 · 토요일 파랑) ---------- */
+const DP = { el:null, input:null, y:0, m:0 };
+function dpNorm(v){ v=String(v||"").trim(); let m;
+  if ((m=/^(\d{4})[-./ ]?(\d{1,2})[-./ ]?(\d{1,2})$/.exec(v))) {}
+  else if ((m=/^(\d{1,2})[-./ ](\d{1,2})$/.exec(v))) m=[0, new Date().getFullYear(), m[1], m[2]];
+  else return null;
+  const y=+m[1], mo=+m[2], d=+m[3]; const t=new Date(Date.UTC(y,mo-1,d));
+  if (t.getUTCMonth()!==mo-1 || t.getUTCDate()!==d) return null;
+  return y+"-"+String(mo).padStart(2,"0")+"-"+String(d).padStart(2,"0"); }
+function dpClose(){ DP.el?.remove(); DP.el=null; DP.input=null; document.removeEventListener("pointerdown", dpOutside, true); window.removeEventListener("keydown", dpKey, true); window.removeEventListener("resize", dpClose); }
+function dpOutside(e){ if (DP.el && !DP.el.contains(e.target) && e.target!==DP.input) dpClose(); }
+function dpKey(e){ if (e.key==="Escape" && DP.el) { e.stopImmediatePropagation(); e.preventDefault(); const i=DP.input; dpClose(); i?.focus(); } }
+function dpSet(inp, v){ inp.value=v; inp.dispatchEvent(new Event("input",{bubbles:true})); inp.dispatchEvent(new Event("change",{bubbles:true})); }
+function dpRender(){
+  const {y,m}=DP, inp=DP.input, sel=dpNorm(inp.value), first=new Date(Date.UTC(y,m,1)), start=-first.getUTCDay();
+  const base=Math.round(first.getTime()/DAY);
+  let cells="";
+  for (let k=0;k<42;k++){ const n=base+start+k, d=new Date(n*DAY), key=ds(n), w=d.getUTCDay(), out=d.getUTCMonth()!==m;
+    if (k===35 && out) break;
+    const lg=LEGAL_HOL[key], co=!lg && HOLIDAYS.has(key);
+    const cls=["dp-d", w===0||lg?"red":(w===6?"blue":""), co?"co":"", out?"out":"", n===TODAY?"today":"", key===sel?"sel":""].filter(Boolean).join(" ");
+    const tip=[mdw(n), lg||"", co?"회사 휴무":""].filter(Boolean).join(" · ");
+    cells+='<button type="button" class="'+cls+'" data-d="'+key+'" title="'+esc(tip)+'" aria-label="'+esc(tip)+'"'+(key===sel?' aria-pressed="true"':'')+'>'+d.getUTCDate()+'</button>'; }
+  const mHol = Object.keys(LEGAL_HOL).filter(k=>k.startsWith(y+"-"+String(m+1).padStart(2,"0"))).map(k=>(+k.slice(8))+"일 "+LEGAL_HOL[k]);
+  DP.el.innerHTML='<div class="dp-h"><button type="button" class="dp-nav" data-nav="-1" aria-label="이전 달">‹</button><b>'+y+'년 '+(m+1)+'월</b><button type="button" class="dp-nav" data-nav="1" aria-label="다음 달">›</button></div>'+
+    '<div class="dp-w"><span class="red">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="blue">토</span></div>'+
+    '<div class="dp-g">'+cells+'</div>'+
+    (mHol.length?'<div class="dp-hol">'+esc(mHol.join(" · "))+'</div>':'')+
+    '<div class="dp-f"><span class="dp-lg"><i class="red"></i>공휴일 <i class="blue"></i>토요일 <i class="co"></i>회사 휴무</span><button type="button" class="dp-today">오늘</button></div>';
+}
+function dpOpen(inp){
+  if (inp.readOnly || inp.disabled) return;
+  if (DP.input===inp) return;
+  dpClose();
+  const v=dpNorm(inp.value), base=v? new Date(v+"T00:00:00Z") : new Date(TODAY*DAY);
+  DP.input=inp; DP.y=base.getUTCFullYear(); DP.m=base.getUTCMonth();
+  const el=document.createElement("div"); el.className="dp"; el.setAttribute("role","dialog"); el.setAttribute("aria-label","날짜 선택"); DP.el=el;
+  document.body.append(el); dpRender();
+  const r=inp.getBoundingClientRect(), W=el.offsetWidth, H=el.offsetHeight, vw=innerWidth, vh=innerHeight;
+  el.style.left=Math.max(8, Math.min(r.left, vw-W-8))+"px";
+  el.style.top=(r.bottom+4+H<=vh-8 ? r.bottom+4 : Math.max(8, r.top-4-H))+"px";
+  el.addEventListener("pointerdown", e=>e.preventDefault());
+  el.addEventListener("click", e=>{
+    const nav=e.target.closest("[data-nav]"), day=e.target.closest("[data-d]");
+    if (nav) { DP.m+= +nav.dataset.nav; if(DP.m<0){DP.m=11;DP.y--;} if(DP.m>11){DP.m=0;DP.y++;} dpRender(); return; }
+    if (e.target.closest(".dp-today")) { const i=DP.input; dpSet(i, ds(TODAY)); dpClose(); i.focus(); return; }
+    if (day) { const i=DP.input; dpSet(i, day.dataset.d); dpClose(); i.focus(); }
+  });
+  window.addEventListener("keydown", dpKey, true);
+  setTimeout(()=>{ document.addEventListener("pointerdown", dpOutside, true); window.addEventListener("resize", dpClose); },0);
+}
+/* 드로어 안의 type=date 입력을 이 달력으로 바꿈 (값 형식 YYYY-MM-DD 그대로) */
+function wireDatePickers(root){
+  root.querySelectorAll('input[type="date"]').forEach(inp=>{
+    inp.type="text"; inp.classList.add("dp-in"); inp.setAttribute("inputmode","numeric"); inp.setAttribute("autocomplete","off");
+    inp.placeholder="YYYY-MM-DD"; inp.maxLength=10;
+    const open=()=>dpOpen(inp);
+    inp.addEventListener("click", open);
+    inp.addEventListener("keydown", e=>{ if (e.key==="ArrowDown" || (e.key==="Enter" && !DP.el)) { e.preventDefault(); open(); } });
+    inp.addEventListener("blur", ()=>{ if (DP.input===inp) return; const v=dpNorm(inp.value); if (v && v!==inp.value) dpSet(inp, v); });
+  });
+}
 function drawer(html, onReady){
   const ov = document.getElementById("overlay");
   ov.innerHTML = '<div class="scrim" id="scrim"></div><aside class="drawer" role="dialog" aria-modal="true">'+html+'</aside>';
   ov.querySelector("#scrim").addEventListener("click", closeDrawer);
   ov.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click", closeDrawer));
-  const d = ov.querySelector(".drawer"); onReady && onReady(d);
+  const d = ov.querySelector(".drawer"); wireDatePickers(d); onReady && onReady(d);
   if (!COARSE) d.querySelector("input:not([type=checkbox]):not([type=radio]),select")?.focus();
 }
-function closeDrawer(){ document.getElementById("overlay").innerHTML=""; }
+function closeDrawer(){ dpClose(); document.getElementById("overlay").innerHTML=""; }
 
 /* ---------- bar detail (text · pasted images · attachments) — trial ---------- */
 const DETAIL_TRIAL = () => true;
